@@ -1,0 +1,190 @@
+<abstraction:SpeechProviderControlBase x:Class="MiMoTTS.Controls.SpeechProviderSettingsControls.MiMoSpeechServiceSettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:abstraction="clr-namespace:ClassIsland.Core.Abstractions.Controls;assembly=ClassIsland.Core"
+             xmlns:local="clr-namespace:MiMoTTS.Controls.SpeechProviderSettingsControls">
+
+    <UserControl.Resources>
+        <local:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <StackPanel Margin="16">
+        <!-- API 地址 -->
+        <md:Card Margin="0,0,0,4" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="API 地址" FontWeight="SemiBold"/>
+                </StackPanel>
+                <ComboBox Grid.Column="1" Width="280"
+                          ItemsSource="{Binding ApiBaseUrlOptions}"
+                          SelectedItem="{Binding Settings.ApiBaseUrl, Mode=TwoWay}"/>
+            </Grid>
+        </md:Card>
+
+        <!-- API Key -->
+        <md:Card Margin="0,0,0,4" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="API Key" FontWeight="SemiBold"/>
+                </StackPanel>
+                <PasswordBox Grid.Column="1" Width="280"
+                             x:Name="ApiKeyPasswordBox"/>
+            </Grid>
+        </md:Card>
+
+        <!-- 模型 -->
+        <md:Card Margin="0,0,0,4" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="模型" FontWeight="SemiBold"/>
+                    <TextBlock Text="目前支持 mimo-v2-tts、mimo-v2.5-tts 与 mimo-v2.5-tts-voiceclone" Foreground="Gray" Margin="0,4,0,0"/>
+                </StackPanel>
+                <ComboBox Grid.Column="1" Width="220"
+                          ItemsSource="{Binding ModelOptions}"
+                          SelectedItem="{Binding Settings.Model, Mode=TwoWay}"
+                          SelectionChanged="ModelSelectionChanged"/>
+            </Grid>
+        </md:Card>
+
+        <!-- 音色 -->
+        <md:Card Margin="0,0,0,4" Padding="16" Visibility="{Binding IsVoiceCloneModel, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="音色" FontWeight="SemiBold"/>
+                    <TextBlock Text="例如：mimo_default / default_zh / default_en" Foreground="Gray" Margin="0,4,0,0"/>
+                </StackPanel>
+                <TextBox Grid.Column="1" Width="180" Text="{Binding Settings.Voice, Mode=TwoWay}"/>
+            </Grid>
+        </md:Card>
+
+        <!-- 音色克隆音频样本 -->
+        <md:Card Margin="0,0,0,4" Padding="16" Visibility="{Binding IsVoiceCloneModel, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="音色克隆音频样本" FontWeight="SemiBold"/>
+                    <TextBlock Text="选择 mp3 或 wav 格式的音频文件（Base64 不超过 10MB）" Foreground="Gray" Margin="0,4,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBox Width="240" IsReadOnly="True" Text="{Binding Settings.VoiceCloneAudioPath, Mode=TwoWay}"/>
+                    <Button Content="浏览..." Margin="4,0,0,0" Click="BrowseAudioFile_Click"/>
+                </StackPanel>
+            </Grid>
+        </md:Card>
+
+        <!-- 音频格式 -->
+        <md:Card Margin="0,0,0,4" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="音频格式" FontWeight="SemiBold"/>
+                </StackPanel>
+                <TextBox Grid.Column="1" Width="120" Text="{Binding Settings.AudioFormat, Mode=TwoWay}"/>
+            </Grid>
+        </md:Card>
+
+        <!-- 风格标签 -->
+        <md:Card Margin="0,0,0,4" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="风格标签" FontWeight="SemiBold"/>
+                    <TextBlock Text="v2 使用 &lt;style&gt; 标签，v2.5 使用括号风格标签。" Foreground="Gray" Margin="0,4,0,0"/>
+                </StackPanel>
+                <TextBox Grid.Column="1" Width="220" Text="{Binding Settings.Style, Mode=TwoWay}"/>
+            </Grid>
+        </md:Card>
+
+        <!-- 语速 -->
+        <md:Card Margin="0,0,0,4" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="语速" FontWeight="SemiBold"/>
+                    <TextBlock Text="会和风格标签一起参与文本前缀生成。" Foreground="Gray" Margin="0,4,0,0"/>
+                </StackPanel>
+                <ComboBox Grid.Column="1" Width="150"
+                          ItemsSource="{Binding SpeedStyleOptions}"
+                          SelectedItem="{Binding Settings.SpeedStyle, Mode=TwoWay}"/>
+            </Grid>
+        </md:Card>
+
+        <!-- 唱歌模式 -->
+        <md:Card Margin="0,0,0,4" Padding="16" Visibility="{Binding IsVoiceCloneModel, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="唱歌模式" FontWeight="SemiBold"/>
+                    <TextBlock Text="会在文本最前面自动添加唱歌风格标签。（音色克隆模式不支持）" Foreground="Gray" Margin="0,4,0,0"/>
+                </StackPanel>
+                <CheckBox Grid.Column="1" IsChecked="{Binding Settings.EnableSingingMode, Mode=TwoWay}"/>
+            </Grid>
+        </md:Card>
+
+        <!-- 启用自然语言控制 -->
+        <md:Card Margin="0,0,0,4" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="启用自然语言控制" FontWeight="SemiBold"/>
+                    <TextBlock Text="会把提示词作为 user 角色消息发送，可选但建议携带。" Foreground="Gray" Margin="0,4,0,0"/>
+                </StackPanel>
+                <CheckBox Grid.Column="1" IsChecked="{Binding Settings.EnableUserPrompt, Mode=TwoWay}"/>
+            </Grid>
+        </md:Card>
+
+        <!-- 自然语言控制提示词 -->
+        <md:Card Margin="0,0,0,4" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="自然语言控制提示词" FontWeight="SemiBold"/>
+                    <TextBlock Text="用于控制语气、情绪、节奏等；不会直接出现在合成语音中。" Foreground="Gray" Margin="0,4,0,0"/>
+                </StackPanel>
+                <TextBox Grid.Column="1" Width="360" Height="72"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         Text="{Binding Settings.UserPrompt, Mode=TwoWay}"/>
+            </Grid>
+        </md:Card>
+    </StackPanel>
+</abstraction:SpeechProviderControlBase>

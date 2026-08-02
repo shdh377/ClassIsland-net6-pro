@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Edge_tts_sharp.Model;
 using Edge_tts_sharp;
+using EdgeTts = Edge_tts_sharp.Edge_tts;
 using System.Collections.Generic;
 using ClassIsland.Models;
 

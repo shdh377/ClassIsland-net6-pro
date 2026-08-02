@@ -1,0 +1,25 @@
+<Window x:Class="IslandCaller.Views.CsvImport"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="IslandCaller 导入名单 - CSV"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="NoResize"
+        Height="170"
+        Width="445">
+
+    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10">
+        <TextBlock Text="IslandCaller 导入名单 - 从 CSV 导入"
+                   FontFamily="Segoe UI" FontSize="18" VerticalAlignment="Center"
+                   Margin="0,0,0,8"/>
+        <TextBlock Text="请设置姓名所在列" FontSize="12" Margin="0,8,0,2"/>
+
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4">
+            <TextBlock Text="姓名位于 CSV 的第 " VerticalAlignment="Center" />
+            <TextBox Height="32" Width="60" Margin="3,0" x:Name="name_row" TextChanged="NumberBox_TextChanged"/>
+            <TextBlock Text=" 列" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <Button Content="确认导入" Height="32" HorizontalAlignment="Left" Margin="0,8,0,0"
+                Click="Button_Click"/>
+    </StackPanel>
+</Window>

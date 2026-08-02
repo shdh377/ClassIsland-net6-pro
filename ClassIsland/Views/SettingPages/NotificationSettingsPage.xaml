@@ -260,6 +260,7 @@
                                                     <ComboBoxItem Content="Edge TTS"
                                                                   IsEnabled="{Binding SettingsService.Settings.IsNetworkConnect, Mode=TwoWay}" />
                                                     <ComboBoxItem Content="GPT-SoVITS" />
+                                                    <ComboBoxItem Content="MiMo TTS" />
                                                 </ComboBox>
                                             </StackPanel>
 
@@ -383,6 +384,24 @@
                                                             materialDesign:HintAssist.Hint="并发数" />
                                                     </StackPanel></Expander>
                                             </StackPanel>
+                                            <!-- MiMoTTS 相关设置，仅在选择 MiMoTTS 时显示 -->
+                                            <StackPanel Grid.Row="2" Grid.Column="0"
+                                                        Grid.ColumnSpan="2" Margin="0 6 0 6">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <!-- MiMoTTS 在 ListBox 中的索引为 3 -->
+                                                            <DataTrigger Binding="{Binding SettingsService.Settings.SpeechSource}" Value="3">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+
+                                                <ContentControl Loaded="MiMoTtsSettingsHost_OnLoaded" />
+                                            </StackPanel>
+
                                             <!-- 语音音量 -->
                                             <TextBlock Grid.Row="3" Grid.Column="0" Text="语音音量"
                                                        VerticalAlignment="Center"

@@ -410,7 +410,14 @@ public partial class MainWindow : Window
                         });
                     });
                 }
-                await Task.Run(() => cancellationToken.WaitHandle.WaitOne(request.MaskDuration), cancellationToken);
+                try
+                {
+                    await Task.Run(() => cancellationToken.WaitHandle.WaitOne(request.MaskDuration), cancellationToken);
+                }
+                catch (TaskCanceledException)
+                {
+                    // 取消令牌触发，继续处理后续逻辑
+                }
                 if (request.OverlayContent is null || cancellationToken.IsCancellationRequested || request.OverlayDuration <= TimeSpan.Zero)
                 {
                     BeginStoryboardInLine("OverlayMaskOutDirect");
@@ -438,8 +445,15 @@ public partial class MainWindow : Window
                     Storyboard.SetTargetProperty(da, new PropertyPath(NotificationProgressBarValueProperty));
                     storyboard.Children.Add(da);
                     storyboard.Begin();
-                    await Task.Run(() => cancellationToken.WaitHandle.WaitOne(request.OverlayDuration),
-                        cancellationToken);
+                    try
+                    {
+                        await Task.Run(() => cancellationToken.WaitHandle.WaitOne(request.OverlayDuration),
+                            cancellationToken);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // 取消令牌触发，继续清理
+                    }
                     ViewModel.OverlayRemainStopwatch.Stop();
                 }
                 SpeechService.ClearSpeechQueue();

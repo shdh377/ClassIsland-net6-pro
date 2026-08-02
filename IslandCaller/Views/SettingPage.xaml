@@ -1,0 +1,144 @@
+<abstraction:SettingsPageBase x:Class="IslandCaller.Views.SettingPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:abstraction="clr-namespace:ClassIsland.Core.Abstractions.Controls;assembly=ClassIsland.Core"
+      xmlns:vm="clr-namespace:IslandCaller.ViewModels"
+      xmlns:ci="clr-namespace:ClassIsland.Core.Controls;assembly=ClassIsland.Core"
+      xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+      Title="IslandCaller 设置">
+
+    <Page.DataContext>
+        <vm:SettingPageViewModel />
+    </Page.DataContext>
+
+    <ScrollViewer>
+        <StackPanel Margin="16">
+            <!-- 基本设置 -->
+            <ci:IconText Kind="CogOutline" Text="基本设置" Margin="0,0,0,8"/>
+
+            <!-- 下课禁用 -->
+            <md:Card Margin="0,0,0,4" Padding="16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="下课禁用" FontWeight="SemiBold"/>
+                        <TextBlock Text="在课间禁用所有点名功能" Foreground="Gray" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ToggleButton Grid.Column="1" IsChecked="{Binding IsBreakDisable, Mode=TwoWay}" VerticalAlignment="Center"/>
+                </Grid>
+            </md:Card>
+
+            <!-- 打断点名 -->
+            <md:Card Margin="0,0,0,4" Padding="16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="打断点名" FontWeight="SemiBold"/>
+                        <TextBlock Text="打断上一次点名，并触发新的点名" Foreground="Gray" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ToggleButton Grid.Column="1" IsChecked="{Binding Interruptable, Mode=TwoWay}" VerticalAlignment="Center"/>
+                </Grid>
+            </md:Card>
+
+            <!-- 悬浮窗设置 -->
+            <Separator Margin="0,12,0,8"/>
+            <ci:IconText Kind="WindowMaximize" Text="悬浮窗设置" Margin="0,0,0,8"/>
+
+            <md:Card Margin="0,0,0,4" Padding="16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="启用悬浮窗" FontWeight="SemiBold"/>
+                        <TextBlock Text="是否显示点名悬浮窗" Foreground="Gray" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ToggleButton Grid.Column="1" IsChecked="{Binding IsHoverEnable, Mode=TwoWay}" VerticalAlignment="Center"/>
+                </Grid>
+            </md:Card>
+
+            <md:Card Margin="0,0,0,4" Padding="16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="悬浮窗缩放系数" FontWeight="SemiBold"/>
+                        <TextBlock Text="调整悬浮窗大小，以适配不同的屏幕" Foreground="Gray" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <Slider Grid.Column="1" Minimum="0.5" Maximum="2"
+                            VerticalAlignment="Center"
+                            TickFrequency="0.05"
+                            Width="180"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding HoverScalingFactor, Mode=TwoWay}"/>
+                </Grid>
+            </md:Card>
+
+            <!-- 档案设置 -->
+            <Separator Margin="0,12,0,8"/>
+            <ci:IconText Kind="AccountGroup" Text="档案设置" Margin="0,0,0,8"/>
+
+            <md:Card Margin="0,0,0,4" Padding="16">
+                <StackPanel>
+                    <TextBlock Text="档案编辑" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBlock Text="编辑点名时使用的名单" Foreground="Gray" Margin="0,0,0,8"/>
+
+                    <DataGrid
+                        ItemsSource="{Binding ProfileList}"
+                        AutoGenerateColumns="False"
+                        CanUserAddRows="False"
+                        CanUserDeleteRows="False"
+                        RowHeight="45"
+                        Margin="0,0,0,8">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="序号" Binding="{Binding ID}" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="姓名" Binding="{Binding Name}"/>
+                            <DataGridTemplateColumn Header="手动权重">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Slider Minimum="0" Maximum="2.0"
+                                                    VerticalAlignment="Center"
+                                                    Width="160"
+                                                    TickFrequency="0.05"
+                                                    IsSnapToTickEnabled="True"
+                                                    Value="{Binding ManualWeight, Mode=TwoWay}"/>
+                                            <TextBlock Text="{Binding ManualWeight, StringFormat={}{0:F2}}" Margin="10,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn>
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Command="{Binding DataContext.RowCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Background="Red"
+                                                Margin="6,0"
+                                                Content="X"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Margin="5,10" Click="AddButton_OnClick" Content="添加人员"/>
+                        <Button Margin="5,10" Click="ImportButton_OnClick" Content="导入名单"/>
+                        <Button Margin="5,10" Click="ClearButton_OnClick" Content="清除历史记录"/>
+                        <Button Margin="5,10" Click="SaveButton_OnClick" Content="保存"/>
+                    </StackPanel>
+                </StackPanel>
+            </md:Card>
+        </StackPanel>
+    </ScrollViewer>
+</abstraction:SettingsPageBase>

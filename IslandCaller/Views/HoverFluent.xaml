@@ -1,0 +1,57 @@
+<Window x:Class="IslandCaller.Views.HoverFluent"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:IslandCaller.ViewModels"
+        Title="IslandCaller"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        ResizeMode="CanResizeWithGrip"
+        MinWidth="120" MinHeight="50"
+        Focusable="False"
+        Opacity="0.92"
+        Height="70" Width="163">
+
+    <Window.DataContext>
+        <vm:HoverFluentViewModel />
+    </Window.DataContext>
+
+    <Grid x:Name="DragSurface" Background="Transparent" Focusable="False">
+        <Grid.LayoutTransform>
+            <ScaleTransform ScaleX="{Binding WindowScalingFactor}" ScaleY="{Binding WindowScalingFactor}"/>
+        </Grid.LayoutTransform>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <Button
+            x:Name="Button1"
+            Grid.Column="0"
+            Focusable="False"
+            IsEnabled="{Binding IsEnabled}"
+            Click="Button1_Click"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            Margin="0,0,2,0">
+            <TextBlock Text="{Binding Button1Content}" FontFamily="Segoe UI" FontWeight="Medium" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Button>
+
+        <Button
+            x:Name="Button2"
+            Grid.Column="1"
+            IsEnabled="{Binding IsEnabled}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            MinWidth="40"
+            Focusable="False"
+            PreviewMouseLeftButtonDown="Button2_PreviewMouseLeftButtonDown"
+            PreviewMouseMove="Button2_PreviewMouseMove"
+            PreviewMouseLeftButtonUp="Button2_PreviewMouseLeftButtonUp">
+            <TextBlock Text="..." FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False"/>
+        </Button>
+    </Grid>
+</Window>

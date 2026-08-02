@@ -1,6 +1,6 @@
 <Project>
 	<PropertyGroup>
-		<PowershellBinaryName>pwsh</PowershellBinaryName>
+		<PowershellBinaryName>powershell</PowershellBinaryName>
 		<GenerateHashSummary>true</GenerateHashSummary>
 	</PropertyGroup>
 

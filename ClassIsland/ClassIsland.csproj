@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
 		<LangVersion>12</LangVersion>
+        <Version>1.1.0</Version>
         <Nullable>enable</Nullable>
         <UseWPF>true</UseWPF>
         <UseWindowsForms>True</UseWindowsForms>
@@ -16,6 +17,8 @@
 		<IsMsix>$(IsMsix)</IsMsix>
 		<Configurations>Debug;Release;Debug_MSIX;Release_MSIX</Configurations>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<!-- 精简语言包：仅生成简体中文(zh-Hans)卫星资源程序集，去掉其他语言的本地化 -->
+		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Configuration)'=='Release' Or '$(Configuration)'=='Release_MSIX'">
         <OutputType>WinExe</OutputType>
@@ -54,10 +57,11 @@
     </ItemGroup>
     <ItemGroup Condition="'$(Configuration)'=='Debug'">
         <PackageReference Include="JetBrains.Profiler.Api" Version="1.4.6" />
+        <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
     </ItemGroup>
     <ItemGroup Condition="'$(Configuration)'=='Debug_MSIX'">
       <PackageReference Include="JetBrains.Profiler.Api">
-        <Version>1.4.6</Version>
+        <Version>1.1.0</Version>
       </PackageReference>
     </ItemGroup>
     <ItemGroup>
@@ -144,5 +148,28 @@
 		<Message Text="TargetFramework: $(TargetFramework)" Importance="high" />
     </Target>
 
+	<ItemGroup>
+		<Reference Include="websocket-sharp">
+			<HintPath>$(NuGetPackageRoot)websocketsharp/1.0.3-rc11/lib/websocket-sharp.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
 	<Import Project="..\Global.props" />
+
+    <!-- 精简语言包：构建后删除除 zh-Hans(简体中文) 外的卫星资源目录。
+         System.CommandLine(beta) 包自带的多语言 satellite 不受 SatelliteResourceLanguages 属性控制，故在此显式清理。 -->
+    <Target Name="TrimSatelliteLanguages" AfterTargets="Build">
+        <RemoveDir Directories="$(TargetDir)cs/" />
+        <RemoveDir Directories="$(TargetDir)de/" />
+        <RemoveDir Directories="$(TargetDir)es/" />
+        <RemoveDir Directories="$(TargetDir)fr/" />
+        <RemoveDir Directories="$(TargetDir)it/" />
+        <RemoveDir Directories="$(TargetDir)ja/" />
+        <RemoveDir Directories="$(TargetDir)ko/" />
+        <RemoveDir Directories="$(TargetDir)pl/" />
+        <RemoveDir Directories="$(TargetDir)pt-BR/" />
+        <RemoveDir Directories="$(TargetDir)ru/" />
+        <RemoveDir Directories="$(TargetDir)tr/" />
+        <RemoveDir Directories="$(TargetDir)zh-Hant/" />
+    </Target>
 </Project>

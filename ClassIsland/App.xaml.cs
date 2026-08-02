@@ -29,6 +29,7 @@ using ClassIsland.Core.Controls;
 using ClassIsland.Core.Controls.CommonDialog;
 using ClassIsland.Core.Extensions;
 using ClassIsland.Core.Extensions.Registry;
+using ClassIsland.Core.Services;
 using ClassIsland.Shared;
 using ClassIsland.Shared.Abstraction.Services;
 using ClassIsland.Models;
@@ -113,8 +114,7 @@ public partial class App : AppBase, IAppHost
 #else
         "./";
 #endif
-    public static readonly string AppDataFolderPath =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClassIsland");
+    public static readonly string AppDataFolderPath = Path.Combine(AppRootFolderPath, "Data");
 
     public static readonly string AppLogFolderPath = Path.Combine(AppRootFolderPath, "Logs");
 
@@ -496,12 +496,38 @@ public partial class App : AppBase, IAppHost
                 {
                     // ignore
                 }
+                // 注册内置语音提供方到注册表
+                services.AddSingleton<SpeechProviderRegistry>(provider =>
+                {
+                    var registry = new SpeechProviderRegistry();
+                    registry.RegisterProvider<SystemSpeechService>("系统TTS", 0);
+                    registry.RegisterProvider<EdgeTtsService>("EdgeTTS", 1);
+                    registry.RegisterProvider<GptSoVitsService>("GPT-SoVITS", 2);
+                    return registry;
+                });
+
                 services.AddSingleton<ISpeechService>((provider =>
                 {
                     var s = provider.GetService<SettingsService>();
-                    if (isSystemSpeechSystemExist)
+                    var registry = provider.GetService<SpeechProviderRegistry>();
+                    var selectedIndex = s?.Settings.SpeechSource ?? 0;
+
+                    // 仅 系统TTS(0) 依赖系统语音。即使系统语音检测失败（例如重启瞬间检测偶发失败），
+                    // 也应使用用户选择的 Edge/GPT-SoVITS/MiMo 提供方，而不是被强制回退为 Edge TTS。
+                    if (isSystemSpeechSystemExist || selectedIndex != 0)
                     {
-                        return s?.Settings.SpeechSource switch
+                        // 首先尝试从注册表中获取
+                        if (registry != null && registry.HasProvider(selectedIndex))
+                        {
+                            var providerType = registry.GetProviderType(selectedIndex);
+                            if (providerType != null)
+                            {
+                                return (ISpeechService)ActivatorUtilities.CreateInstance(provider, providerType);
+                            }
+                        }
+
+                        // 回退到内置提供方
+                        return selectedIndex switch
                         {
                             0 => new SystemSpeechService(),
                             1 => new EdgeTtsService(),
@@ -547,7 +573,7 @@ public partial class App : AppBase, IAppHost
                 services.AddSettingsPage<AutomationSettingsPage>();
                 services.AddSettingsPage<StorageSettingsPage>();
                 services.AddSettingsPage<PrivacySettingsPage>();
-                //services.AddSettingsPage<PluginsSettingsPage>();
+                services.AddSettingsPage<PluginsSettingsPage>();
                 services.AddSettingsPage<TestSettingsPage>();
                 services.AddSettingsPage<DebugPage>();
                 services.AddSettingsPage<DebugBrushesSettingsPage>();
@@ -644,7 +670,7 @@ public partial class App : AppBase, IAppHost
                 // 认证提供方
                 services.AddAuthorizeProvider<PasswordAuthorizeProvider>();
                 // Plugins
-                //PluginService.InitializePlugins(context, services);
+                PluginService.InitializePlugins(context, services);
             }).Build();
         Logger = GetService<ILogger<App>>();
         Logger.LogInformation("ClassIsland {}", AppVersionLong);

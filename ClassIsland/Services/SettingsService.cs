@@ -83,7 +83,10 @@ public class SettingsService(ILogger<SettingsService> Logger, IManagementService
             // ignored
         }
 
-        if (!Settings.IsSystemSpeechSystemExist)
+        // 仅当系统语音不存在且选中的是 系统TTS(0) 时才回退到 EdgeTTS(1)。
+        // 若用户已选择 GPT-SoVITS(2)、MiMo TTS(3) 等不依赖系统语音的提供方，则保留用户选择，
+        // 避免应用重启后语音引擎被错误地改回 Edge TTS。
+        if (!Settings.IsSystemSpeechSystemExist && Settings.SpeechSource == 0)
         {
             Settings.SpeechSource = 1;
         }

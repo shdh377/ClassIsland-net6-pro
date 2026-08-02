@@ -1,0 +1,61 @@
+<Window x:Class="IslandCaller.Views.PersonalCall"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="IslandCaller 自定义抽取"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        ResizeMode="CanResizeWithGrip"
+        MinWidth="350" MinHeight="180"
+        ShowActivated="False"
+        Focusable="False"
+        Height="200"
+        Width="500">
+
+    <Border Background="White" CornerRadius="8" BorderBrush="LightGray" BorderThickness="1"
+            MouseLeftButtonDown="Border_MouseLeftButtonDown">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="10"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 标题 -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="IslandCaller 自定义抽取"
+                           FontFamily="Segoe UI"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- 抽取人数 -->
+            <StackPanel Grid.Row="2" Margin="0,8,0,0">
+                <TextBlock Text="抽取人数" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock Text="指定本次抽取的总人数" Foreground="Gray" Margin="0,0,0,8"/>
+                <Slider
+                    x:Name="NumSlider"
+                    Minimum="1"
+                    Maximum="5"
+                    IsSnapToTickEnabled="True"
+                    TickFrequency="1"
+                    Value="1"
+                    Ticks="1,2,3,4,5"/>
+                <TextBlock Text="{Binding ElementName=NumSlider, Path=Value, StringFormat={}{0:F0}}" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- 按钮 -->
+            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                <Button Content="取消" Width="230" Height="32" Margin="0,0,5,0" Click="CancelButton_Click"/>
+                <Button Content="点名" Width="230" Height="32" Margin="5,0,0,0" Click="SureButton_Click"
+                        Style="{StaticResource MaterialDesignRaisedButton}"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

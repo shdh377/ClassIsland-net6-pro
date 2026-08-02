@@ -11,6 +11,7 @@ using ClassIsland.Shared.Abstraction.Services;
 
 using Edge_tts_sharp;
 using Edge_tts_sharp.Model;
+using EdgeTts = Edge_tts_sharp.Edge_tts;
 
 using Microsoft.Extensions.Logging;
 

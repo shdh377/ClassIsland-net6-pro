@@ -1242,7 +1242,9 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
         set
         {
             if (value == _speechSource) return;
-            if (!IsSystemSpeechSystemExist)
+            // 仅当系统语音不存在且选择了 系统TTS(0) 时回退到 EdgeTTS(1)。
+            // GPT-SoVITS(2)、MiMo TTS(3) 等提供方不依赖系统语音，不应被强制改写。
+            if (!IsSystemSpeechSystemExist && value == 0)
             {
                 _speechSource = 1;
                 OnPropertyChanged();

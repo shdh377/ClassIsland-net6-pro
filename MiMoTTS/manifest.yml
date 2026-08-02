@@ -1,0 +1,9 @@
+id: MiMoTTS
+name: MiMoTTS
+description: 小米 MiMo TTS 语音服务插件
+entranceAssembly: "MiMoTTS.dll"
+url: https://github.com/example/MiMoTTS
+author: MiMoTTS
+version: 1.2.4.0
+apiVersion: 1.4.0.0
+icon: icon.ico

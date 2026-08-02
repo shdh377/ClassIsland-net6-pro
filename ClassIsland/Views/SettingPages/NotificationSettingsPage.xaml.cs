@@ -145,7 +145,9 @@ public partial class NotificationSettingsPage : SettingsPageBase
         }
         ];        
 
-    public NotificationSettingsPage(SettingsService settingsService, INotificationHostService notificationHostService, ISpeechService speechService, IManagementService managementService)
+    private readonly ClassIsland.Core.Services.SpeechProviderRegistry _speechProviderRegistry;
+
+    public NotificationSettingsPage(SettingsService settingsService, INotificationHostService notificationHostService, ISpeechService speechService, IManagementService managementService, ClassIsland.Core.Services.SpeechProviderRegistry speechProviderRegistry)
     {
         InitializeComponent();
         DataContext = this;
@@ -153,6 +155,7 @@ public partial class NotificationSettingsPage : SettingsPageBase
         NotificationHostService = notificationHostService;
         SpeechService = speechService;
         ManagementService = managementService;
+        _speechProviderRegistry = speechProviderRegistry;
         SettingsService.Settings.PropertyChanged += SettingsOnPropertyChanged;
         
         GptSoVitsSpeechSettingsPresets =
@@ -211,6 +214,21 @@ public partial class NotificationSettingsPage : SettingsPageBase
         Process.Start(@"C:\WINDOWS\system32\rundll32.exe", @"shell32.dll,Control_RunDLL C:\WINDOWS\system32\Speech\SpeechUX\sapi.cpl");
     }
 
+    private void MiMoTtsSettingsHost_OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.ContentControl host && host.Content == null)
+        {
+            var controlType = _speechProviderRegistry.GetSettingsControlType(3);
+            if (controlType != null)
+            {
+                var control = Activator.CreateInstance(controlType) as System.Windows.Controls.UserControl;
+                if (control != null)
+                {
+                    host.Content = control;
+                }
+            }
+        }
+    }
 
     private void ButtonSaveGptSovitsPreset_OnClick(object sender, RoutedEventArgs e)
     {

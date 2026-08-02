@@ -107,7 +107,7 @@ public partial class ComponentPresenter : UserControl, INotifyPropertyChanged
         }
     }
 
-    private IRulesetService RulesetService { get; } = IAppHost.GetService<IRulesetService>();
+    private IRulesetService? RulesetService { get; } = IAppHost.TryGetService<IRulesetService>();
 
     private object? _presentingContent;
 
@@ -225,11 +225,17 @@ public partial class ComponentPresenter : UserControl, INotifyPropertyChanged
         if (HideOnRule)
         {
             CheckHideRule();
-            RulesetService.StatusUpdated += RulesetServiceOnStatusUpdated;
+            if (RulesetService != null)
+            {
+                RulesetService.StatusUpdated += RulesetServiceOnStatusUpdated;
+            }
         }
         else
         {
-            RulesetService.StatusUpdated -= RulesetServiceOnStatusUpdated;
+            if (RulesetService != null)
+            {
+                RulesetService.StatusUpdated -= RulesetServiceOnStatusUpdated;
+            }
             Visibility = Visibility.Visible;
         }
         UpdateComponentHidState();
@@ -247,7 +253,7 @@ public partial class ComponentPresenter : UserControl, INotifyPropertyChanged
         {
             return;
         }
-        if (HidingRules != null && RulesetService.IsRulesetSatisfied(HidingRules))
+        if (HidingRules != null && RulesetService != null && RulesetService.IsRulesetSatisfied(HidingRules))
         {
             Visibility = Visibility.Collapsed;
         }

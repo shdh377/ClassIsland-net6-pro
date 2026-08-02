@@ -365,3 +365,8 @@ FodyWeavers.xsd
 ci_tmp/
 cipx/
 *.cipx
+# ===== 上传 GitHub 前追加：发布包与运行数据 =====
+*.zip
+*.bak
+Data/
+Settings.json
