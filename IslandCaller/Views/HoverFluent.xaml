@@ -8,50 +8,47 @@
         Background="Transparent"
         ShowInTaskbar="False"
         Topmost="True"
-        ResizeMode="CanResizeWithGrip"
-        MinWidth="120" MinHeight="50"
+        ResizeMode="CanResize"
         Focusable="False"
-        Opacity="0.92"
-        Height="70" Width="163">
+        Opacity="0.92">
 
     <Window.DataContext>
         <vm:HoverFluentViewModel />
     </Window.DataContext>
 
-    <Grid x:Name="DragSurface" Background="Transparent" Focusable="False">
-        <Grid.LayoutTransform>
-            <ScaleTransform ScaleX="{Binding WindowScalingFactor}" ScaleY="{Binding WindowScalingFactor}"/>
-        </Grid.LayoutTransform>
-
+    <!-- 布局：Call 按钮(2.35:1) + 间隔 + ... 按钮(2:1)；窗口宽 = Call宽+间隔+...宽，高 = 按钮高。
+         所有尺寸随缩放系数等比变化；文字字号按 cap 高度 = 0.70 × 按钮高 计算 -->
+    <Grid x:Name="DragSurface" Background="Transparent" Focusable="False"
+          Width="{Binding GridWidth}" Height="{Binding GridHeight}"
+          HorizontalAlignment="Left" VerticalAlignment="Top">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="{Binding Button1Width}" />
+            <ColumnDefinition Width="{Binding Gap}" />
+            <ColumnDefinition Width="{Binding Button2Width}" />
         </Grid.ColumnDefinitions>
 
         <Button
             x:Name="Button1"
-            Grid.Column="0"
+            Grid.Row="0" Grid.Column="0"
             Focusable="False"
             IsEnabled="{Binding IsEnabled}"
             Click="Button1_Click"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch"
-            Margin="0,0,2,0">
-            <TextBlock Text="{Binding Button1Content}" FontFamily="Segoe UI" FontWeight="Medium" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            Width="{Binding Button1Width}" Height="{Binding ButtonHeight}"
+            HorizontalAlignment="Left" VerticalAlignment="Top">
+            <TextBlock Text="{Binding Button1Content}" FontFamily="Segoe UI" FontWeight="Medium" FontSize="{Binding FontSize}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
         </Button>
 
         <Button
             x:Name="Button2"
-            Grid.Column="1"
+            Grid.Row="0" Grid.Column="2"
             IsEnabled="{Binding IsEnabled}"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch"
-            MinWidth="40"
+            Width="{Binding Button2Width}" Height="{Binding ButtonHeight}"
+            HorizontalAlignment="Left" VerticalAlignment="Top"
             Focusable="False"
             PreviewMouseLeftButtonDown="Button2_PreviewMouseLeftButtonDown"
             PreviewMouseMove="Button2_PreviewMouseMove"
             PreviewMouseLeftButtonUp="Button2_PreviewMouseLeftButtonUp">
-            <TextBlock Text="..." FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False"/>
+            <TextBlock Text="..." FontSize="{Binding FontSize}" VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False"/>
         </Button>
     </Grid>
 </Window>
