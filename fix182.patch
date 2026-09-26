@@ -1,0 +1,370 @@
+diff --git a/ClassIsland.Core/Controls/LessonsControls/LessonsListBox.cs b/ClassIsland.Core/Controls/LessonsControls/LessonsListBox.cs
+index db506428..1dd5baae 100644
+--- a/ClassIsland.Core/Controls/LessonsControls/LessonsListBox.cs
++++ b/ClassIsland.Core/Controls/LessonsControls/LessonsListBox.cs
+@@ -12,6 +12,7 @@ using System.Windows.Media;
+ using System.Windows.Media.Imaging;
+ using System.Windows.Navigation;
+ using System.Windows.Shapes;
++using ClassIsland.Core.Abstractions.Services;
+ using ClassIsland.Shared;
+ using ClassIsland.Shared.Abstraction.Models;
+ using ClassIsland.Shared.Models.Profile;
+@@ -116,6 +117,11 @@ public class LessonsListBox : ListBox
+         set { SetValue(HideFinishedClassProperty, value); }
+     }
+ 
++    /// <summary>
++    /// 课程服务
++    /// </summary>
++    public ILessonsService? LessonsService => IAppHost.TryGetService<ILessonsService>();
++
+     static LessonsListBox()
+     {
+         DefaultStyleKeyProperty.OverrideMetadata(typeof(LessonsListBox), new FrameworkPropertyMetadata(typeof(LessonsListBox)));
+diff --git a/ClassIsland.Core/Controls/LessonsControls/LessonsListBox.xaml b/ClassIsland.Core/Controls/LessonsControls/LessonsListBox.xaml
+index 542cf2d9..21426e7f 100644
+--- a/ClassIsland.Core/Controls/LessonsControls/LessonsListBox.xaml
++++ b/ClassIsland.Core/Controls/LessonsControls/LessonsListBox.xaml
+@@ -99,6 +99,8 @@
+                                 <Binding Path="DiscardHidingDefault" RelativeSource="{RelativeSource FindAncestor, AncestorType=lessonsControls:LessonsListBox}" Mode="OneWay"/>
+                                 <Binding Path="ShowCurrentTimeLayoutItemOnlyOnClass" RelativeSource="{RelativeSource FindAncestor, AncestorType=lessonsControls:LessonsListBox}" Mode="OneWay"/>
+                                 <Binding Path="HideFinishedClass" RelativeSource="{RelativeSource FindAncestor, AncestorType=lessonsControls:LessonsListBox}" Mode="OneWay"/>
++                                <Binding Path="LessonsService.ValidTimeLayoutItems" RelativeSource="{RelativeSource FindAncestor, AncestorType=lessonsControls:LessonsListBox}" Mode="OneWay"/>
++                                <Binding Path="IsLiveUpdatingEnabled" RelativeSource="{RelativeSource FindAncestor, AncestorType=lessonsControls:LessonsListBox}" Mode="OneWay"/>
+                             </MultiBinding>
+                         </ContentPresenter.ContentTemplate>
+                     </ContentPresenter>
+diff --git a/ClassIsland.Core/Controls/LessonsControls/LessonsListBoxItemTemplateMultiConverter.cs b/ClassIsland.Core/Controls/LessonsControls/LessonsListBoxItemTemplateMultiConverter.cs
+index f46136c4..a987dbc6 100644
+--- a/ClassIsland.Core/Controls/LessonsControls/LessonsListBoxItemTemplateMultiConverter.cs
++++ b/ClassIsland.Core/Controls/LessonsControls/LessonsListBoxItemTemplateMultiConverter.cs
+@@ -42,20 +42,23 @@ internal class LessonsListBoxItemTemplateMultiConverter : DependencyObject, IMul
+     public object? Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+     {
+         // 传入参数：
+-        // [0]: int            TimeType
+-        // [1]: bool           IsHideDefault
+-        // [2]: TimeLayoutItem SelectedItem
+-        // [3]: TimeLayoutItem CurrentItem
+-        // [4]: bool           DiscardHidingDefault (reserved)
+-        // [5]: bool           ShowCurrentTimeLayoutItemOnlyOnClass
+-        // [6]: bool           HideFinishedClass
+-        if (values.Length < 7)
++        // [0]: int              TimeType
++        // [1]: bool             IsHideDefault
++        // [2]: TimeLayoutItem   SelectedItem
++        // [3]: TimeLayoutItem   CurrentItem
++        // [4]: bool             DiscardHidingDefault (reserved)
++        // [5]: bool             ShowCurrentTimeLayoutItemOnlyOnClass
++        // [6]: bool             HideFinishedClass
++        // [7]: ICollection<...> ValidTimePoints
++        // [8]: bool             IsLiveUpdatingEnabled
++        if (values.Length < 9)
+             return BlankDataTemplate;
+         if (values[0] is not int timeType ||
+             values[1] is not bool isHideDefault ||
+             values[4] is not bool discardHidingDefault ||
+             values[5] is not bool showCurrentTimeLayoutItemOnlyOnClass ||
+-            values[6] is not bool hideFinishedClass)
++            values[6] is not bool hideFinishedClass ||
++            values[8] is not bool isLiveUpdateEnabled)
+         {
+             return BlankDataTemplate;
+         }
+@@ -70,6 +73,12 @@ internal class LessonsListBoxItemTemplateMultiConverter : DependencyObject, IMul
+         if (currentItem != selectedItem && selectedItem?.TimeType == 0 && showCurrentTimeLayoutItemOnlyOnClass)
+             return BlankDataTemplate;
+ 
++        if (isLiveUpdateEnabled && values[7] is ICollection<TimeLayoutItem> validTimePoints &&
++            (currentItem == null || !validTimePoints.Contains(currentItem)))
++        {
++            return BlankDataTemplate;
++        }
++
+         var itemDateTime = (currentItem?.TimeType == 2) ? currentItem?.StartSecond : currentItem?.EndSecond;
+         if ((itemDateTime?.TimeOfDay < selectedItem?.StartSecond.TimeOfDay 
+              || itemDateTime.HasValue && itemDateTime.Value.TimeOfDay <
+@@ -89,7 +98,6 @@ internal class LessonsListBoxItemTemplateMultiConverter : DependencyObject, IMul
+             return BlankDataTemplate;
+         }
+ 
+-
+         return selectedItem == currentItem ? ExpandedDataTemplate : MinimizedDataTemplate;
+     }
+ 
+diff --git a/ClassIsland.Shared.IPC/Abstractions/Services/IPublicLessonsService.cs b/ClassIsland.Shared.IPC/Abstractions/Services/IPublicLessonsService.cs
+index bfa15772..93621045 100644
+--- a/ClassIsland.Shared.IPC/Abstractions/Services/IPublicLessonsService.cs
++++ b/ClassIsland.Shared.IPC/Abstractions/Services/IPublicLessonsService.cs
+@@ -102,4 +102,9 @@ public interface IPublicLessonsService
+     /// <param name="date">要获取课表的日期</param>
+     /// <returns>获取到的课表</returns>
+     ClassPlan? GetClassPlanByDate(DateTime date);
++
++    /// <summary>
++    /// 有效的时间点列表。
++    /// </summary>
++    ObservableCollection<TimeLayoutItem> ValidTimeLayoutItems { get; set; }
+ }
+\ No newline at end of file
+diff --git a/ClassIsland.Shared/Models/Profile/ClassInfo.cs b/ClassIsland.Shared/Models/Profile/ClassInfo.cs
+index 54379a0b..ccb26898 100644
+--- a/ClassIsland.Shared/Models/Profile/ClassInfo.cs
++++ b/ClassIsland.Shared/Models/Profile/ClassInfo.cs
+@@ -13,6 +13,7 @@ public class ClassInfo : AttachableSettingsObject
+     private int _index = 0;
+     private TimeLayout _currentTimeLayout = new();
+     private bool _isChangedClass = false;
++    private bool _isEnabled = true;
+ 
+     /// <summary>
+     /// 课程在课程表中的位置
+@@ -79,4 +80,18 @@ public class ClassInfo : AttachableSettingsObject
+             OnPropertyChanged();
+         }
+     }
++
++    /// <summary>
++    /// 这节课是否已启用
++    /// </summary>
++    public bool IsEnabled
++    {
++        get => _isEnabled;
++        set
++        {
++            if (value == _isEnabled) return;
++            _isEnabled = value;
++            OnPropertyChanged();
++        }
++    }
+ }
+\ No newline at end of file
+diff --git a/ClassIsland.Shared/Models/Profile/ClassPlan.cs b/ClassIsland.Shared/Models/Profile/ClassPlan.cs
+index 719dbd91..f62f25fb 100644
+--- a/ClassIsland.Shared/Models/Profile/ClassPlan.cs
++++ b/ClassIsland.Shared/Models/Profile/ClassPlan.cs
+@@ -114,6 +114,7 @@ public class ClassPlan : AttachableSettingsObject
+     {
+         TimeLayout.Layouts.CollectionChanged += LayoutsOnCollectionChanged;
+         RefreshClassesList(true);
++        NotifyClassesChanged();
+     }
+ 
+     private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+@@ -131,6 +132,7 @@ public class ClassPlan : AttachableSettingsObject
+                     TimeLayout.Layouts.CollectionChanged += LayoutsOnCollectionChanged;
+                 }
+ 
++                NotifyClassesChanged();
+                 break;
+             }
+             case nameof(Classes):
+diff --git a/ClassIsland/Controls/Components/ScheduleComponent.xaml b/ClassIsland/Controls/Components/ScheduleComponent.xaml
+index d5339183..a2d6a42a 100644
+--- a/ClassIsland/Controls/Components/ScheduleComponent.xaml
++++ b/ClassIsland/Controls/Components/ScheduleComponent.xaml
+@@ -52,7 +52,6 @@
+         <ci:LessonsListBox Grid.Column="1" 
+                            Subjects="{Binding ProfileService.Profile.Subjects, Mode=OneWay}"
+                            LessonControlSettings="{Binding Settings, Mode=OneWay}"
+-                           IsLiveUpdatingEnabled="True"
+                            ShowCurrentTimeLayoutItemOnlyOnClass="{Binding ShowCurrentLessonOnlyOnClass, Mode=OneWay}"
+                            HighlightChangedClass="{Binding Settings.HighlightChangedClass, Mode=OneWay}">
+ 
+@@ -67,6 +66,7 @@
+                             <Setter Property="ClassPlan" Value="{Binding LessonsService.CurrentClassPlan, Mode=OneWay}"/>
+                             <Setter Property="SelectedIndex" Value="{Binding LessonsService.CurrentSelectedIndex, Mode=OneWay}"/>
+                             <Setter Property="HideFinishedClass" Value="{Binding Settings.HideFinishedClass, Mode=OneWay}"/>
++                            <Setter Property="IsLiveUpdatingEnabled" Value="True"/>
+                         </MultiDataTrigger>
+                         <MultiDataTrigger>
+                             <MultiDataTrigger.Conditions>
+@@ -89,11 +89,13 @@
+                             <Setter Property="ClassPlan" Value="{Binding LessonsService.CurrentClassPlan, Mode=OneWay}"/>
+                             <Setter Property="SelectedIndex" Value="{Binding LessonsService.CurrentSelectedIndex, Mode=OneWay}"/>
+                             <Setter Property="HideFinishedClass" Value="{Binding Settings.HideFinishedClass, Mode=OneWay}"/>
++                            <Setter Property="IsLiveUpdatingEnabled" Value="True"/>
+                         </DataTrigger>
+                         <DataTrigger Binding="{Binding Settings.TomorrowScheduleShowMode}" Value="0">
+                             <Setter Property="ClassPlan" Value="{Binding LessonsService.CurrentClassPlan, Mode=OneWay}"/>
+                             <Setter Property="SelectedIndex" Value="{Binding LessonsService.CurrentSelectedIndex, Mode=OneWay}"/>
+                             <Setter Property="HideFinishedClass" Value="{Binding Settings.HideFinishedClass, Mode=OneWay}"/>
++                            <Setter Property="IsLiveUpdatingEnabled" Value="True"/>
+                         </DataTrigger>
+                         <DataTrigger Binding="{Binding Settings.TomorrowScheduleShowMode}" Value="2">
+                             <Setter Property="ClassPlan" Value="{Binding TomorrowClassPlan, Mode=OneWay}"/>
+diff --git a/ClassIsland/Services/LessonsService.cs b/ClassIsland/Services/LessonsService.cs
+index b84fdec3..1f806486 100644
+--- a/ClassIsland/Services/LessonsService.cs
++++ b/ClassIsland/Services/LessonsService.cs
+@@ -1,5 +1,7 @@
+ using System;
++using System.Collections.Generic;
+ using System.Collections.ObjectModel;
++using System.ComponentModel;
+ using System.Linq;
+ using System.Windows.Threading;
+ using ClassIsland.Core.Abstractions.Services;
+@@ -33,6 +35,7 @@ public class LessonsService : ObservableRecipient, ILessonsService
+     private TimeSpan _onBreakingTimeLeftTime = TimeSpan.Zero;
+     private TimeLayoutItem _nextClassTimeLayoutItem = TimeLayoutItem.Empty;
+     private ObservableCollection<int> _multiWeekRotation = [0, 0, 1, 1, 1];
++    private ObservableCollection<TimeLayoutItem> _validTimeLayoutItems = [];
+ 
+     private static readonly ObservableCollection<int> DefaultMultiWeekRotation = [0, 0, 1, 1, 1];
+ 
+@@ -145,6 +148,58 @@ public class LessonsService : ObservableRecipient, ILessonsService
+ 
+     public ClassPlan? GetClassPlanByDate(DateTime date) => GetClassPlanByDate(date, out _);
+ 
++    public ObservableCollection<TimeLayoutItem> ValidTimeLayoutItems
++    {
++        get => _validTimeLayoutItems;
++        set => SetProperty(ref _validTimeLayoutItems, value);
++    }
++
++    private ObservableCollection<TimeLayoutItem> GetValidTimeLayoutItems()
++    {
++        if (CurrentClassPlan?.TimeLayout == null) 
++            return [];
++        var timeLayoutMap = CurrentClassPlan.Classes.ToDictionary(x => x.CurrentTimeLayoutItem, x => x);
++        var displayTimePoints = CurrentClassPlan.TimeLayout.Layouts
++            .Where(x => x.TimeType is 0 or 1 or 2)
++            .ToList();
++        ObservableCollection<TimeLayoutItem> items = [..displayTimePoints.Select(x => x)];
++        List<TimeLayoutItem> remove = [];
++        // 正向搜索
++        var isPrevEnabled = true;
++        for (var i = 0; i < displayTimePoints.Count; i++)
++        {
++            if (timeLayoutMap.TryGetValue(items[i], out var info))
++            {
++                isPrevEnabled = info.IsEnabled;
++            }
++
++            if (!isPrevEnabled)
++            {
++                remove.Add(displayTimePoints[i]);
++            }
++        }
++        // 反向搜索
++        isPrevEnabled = true;
++        for (var i = displayTimePoints.Count - 1; i >= 0; i--)
++        {
++            if (timeLayoutMap.TryGetValue(items[i], out var info))
++            {
++                isPrevEnabled = info.IsEnabled;
++            }
++
++            if (!isPrevEnabled)
++            {
++                remove.Add(displayTimePoints[i]);
++            }
++        }
++
++        foreach (var i in remove)
++        {
++            items.Remove(i);
++        }
++        return items;
++    }
++
+     public ClassPlan? GetClassPlanByDate(DateTime date, out string? guid)
+     {
+         guid = null;
+@@ -241,17 +296,8 @@ public class LessonsService : ObservableRecipient, ILessonsService
+         RulesetService.RegisterRuleHandler("classisland.lessons.nextSubject", NextSubjectHandler);
+         RulesetService.RegisterRuleHandler("classisland.lessons.previousSubject", PreviousSubjectHandler);
+         CurrentTimeStateChanged += (sender, args) => RulesetService.NotifyStatusChanged();
+-        PropertyChanged += (sender, args) =>
+-        {
+-            if (args.PropertyName == nameof(CurrentSubject))
+-            {
+-                RulesetService.NotifyStatusChanged();
+-            }
+-            if (args.PropertyName == nameof(CurrentClassPlan))
+-            {
+-                CurrentClassPlan?.RefreshIsChangedClass();
+-            }
+-        };
++        PropertyChanged += OnPropertyChanged;
++        PropertyChanging += OnPropertyChanging;
+ 
+ 
+         CurrentTimeStateChanged += async (_, _) =>
+@@ -279,6 +325,34 @@ public class LessonsService : ObservableRecipient, ILessonsService
+         StartMainTimer();
+     }
+ 
++    private void OnPropertyChanged(object? sender, PropertyChangedEventArgs args)
++    {
++        if (args.PropertyName == nameof(CurrentSubject))
++        {
++            RulesetService.NotifyStatusChanged();
++        }
++
++        if (args.PropertyName == nameof(CurrentClassPlan) && CurrentClassPlan != null)
++        {
++            CurrentClassPlan.ClassesChanged += CurrentClassPlanOnClassesChanged;
++            CurrentClassPlan.RefreshIsChangedClass();
++            ValidTimeLayoutItems = GetValidTimeLayoutItems();
++        }
++    }
++
++    private void OnPropertyChanging(object? sender, PropertyChangingEventArgs e)
++    {
++        if (e.PropertyName == nameof(CurrentClassPlan) && CurrentClassPlan != null)
++        {
++            CurrentClassPlan.ClassesChanged -= CurrentClassPlanOnClassesChanged;
++        }
++    }
++
++    private void CurrentClassPlanOnClassesChanged(object? sender, EventArgs e)
++    {
++        ValidTimeLayoutItems = GetValidTimeLayoutItems();
++    }
++
+     private bool CurrentSubjectHandler(object? settings)
+     {
+         if (settings is not CurrentSubjectRuleSettings s)
+@@ -415,7 +489,7 @@ public class LessonsService : ObservableRecipient, ILessonsService
+         var now = ExactTimeService.GetCurrentLocalDateTime().TimeOfDay;
+ 
+         // 获取当前时间点信息
+-        currentTimeLayoutItem = layout.FirstOrDefault(i =>
++        currentTimeLayoutItem = ValidTimeLayoutItems.FirstOrDefault(i =>
+             i.TimeType is 0 or 1 &&
+             i.StartSecond.TimeOfDay <= now &&
+             i.EndSecond.TimeOfDay >= now);
+@@ -442,7 +516,7 @@ public class LessonsService : ObservableRecipient, ILessonsService
+         }
+ 
+         // 获取下节时间点信息
+-        nextClassTimeLayoutItem = layout.FirstOrDefault(i =>
++        nextClassTimeLayoutItem = ValidTimeLayoutItems.FirstOrDefault(i =>
+             i.TimeType == 0 &&
+             i.EndSecond.TimeOfDay >= now);
+         if (nextClassTimeLayoutItem != null)
+@@ -452,7 +526,7 @@ public class LessonsService : ObservableRecipient, ILessonsService
+                 Profile.Subjects.TryGetValue(CurrentClassPlan.Classes[i0].SubjectId, out var subject))
+                 nextClassSubject = subject;
+         }
+-        nextBreakingTimeLayoutItem = layout.FirstOrDefault(i =>
++        nextBreakingTimeLayoutItem = ValidTimeLayoutItems.FirstOrDefault(i =>
+             i.TimeType == 1 &&
+             i.EndSecond.TimeOfDay >= now);
+ 
+diff --git a/ClassIsland/Views/ProfileSettingsWindow.xaml b/ClassIsland/Views/ProfileSettingsWindow.xaml
+index a45ee340..ea2175e9 100644
+--- a/ClassIsland/Views/ProfileSettingsWindow.xaml
++++ b/ClassIsland/Views/ProfileSettingsWindow.xaml
+@@ -1157,6 +1157,8 @@
+                                                       SelectedIndex="{Binding ViewModel.SelectedClassIndex, RelativeSource={RelativeSource FindAncestor, AncestorType=local:ProfileSettingsWindow}, Mode=TwoWay}"
+                                                       SelectedItem="{Binding ViewModel.SelectedClassInfo, RelativeSource={RelativeSource FindAncestor, AncestorType=local:ProfileSettingsWindow}}">
+                                                 <DataGrid.Columns>
++                                                    <DataGridCheckBoxColumn Header="启用"
++                                                                            Binding="{Binding IsEnabled}"/>
+                                                     <DataGridTemplateColumn Header="时间" IsReadOnly="True">
+                                                         <DataGridTemplateColumn.CellTemplate>
+                                                             <DataTemplate>

@@ -1,0 +1,335 @@
+<!-- AI生成 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClassIsland-net6 · 三项功能优化定稿方案</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<p data-aigc-mark="1" style="margin:0 0 8px;font-size:10px;line-height:1.3;color:#6b6560;font-weight:400;">AI生成</p>
+
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <div class="brand">
+      <span class="brand-mark">CI</span>
+      <span class="brand-text">ClassIsland-net6<em>功能优化定稿</em></span>
+    </div>
+    <nav class="nav" id="nav">
+      <a href="#overview" data-nav>总览</a>
+      <a href="#duty" data-nav>值日生提醒</a>
+      <a href="#web" data-nav>定时打开网页</a>
+      <a href="#weather" data-nav>天气提醒</a>
+      <a href="#deploy" data-nav>部署</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="wrap">
+      <p class="kicker">Win7 生产环境 · D 盘安装 · C 盘开机还原 · 自启不可失效</p>
+      <h1>三项功能优化<br>定稿实施方案</h1>
+      <p class="lede">两个插件 + 一次脚本更新，主程序不做完整重装，开机自启零风险。
+        原第 4 项「点名语音优化」已取消，不纳入本轮实施。</p>
+      <div class="stat-strip">
+        <div class="stat"><b>2</b><span>插件已构建</span></div>
+        <div class="stat"><b>1</b><span>脚本已就绪</span></div>
+        <div class="stat"><b>0</b><span>主程序重装</span></div>
+        <div class="stat muted"><b>1</b><span>已取消项</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section id="overview" class="section">
+    <div class="wrap">
+      <h2 class="sec-title"><span class="sec-no">00</span>方案总览</h2>
+
+      <div class="deliver">
+        <h4>交付状态（构建完成）</h4>
+        <ul>
+          <li><span class="badge plugin">插件</span><b>值日生提醒</b> → <code>DutyReminder\cipx\DutyReminder.cipx</code>，已通过宿主加载实测</li>
+          <li><span class="badge plugin">插件</span><b>定时打开网页</b> → <code>WebOpener\cipx\WebOpener.cipx</code>，已通过宿主加载实测</li>
+          <li><span class="badge script">脚本更新</span><b>天气 6h→12h + 上游改动合并</b> → 主程序已重新编译，除天气 12 小时改动外，还合并了上游 v1.7.0.0 对 <b>issue #182「直接隐藏一定时间的课程」</b>的实现（课表编辑器课程表新增「启用」列，可按课程隐藏一段时间的课）；<code>patch.ps1</code> + <code>update\ClassIsland.dll</code> 就绪</li>
+        </ul>
+        <p class="note">打包目标已同步修复：新的 cipx 不再包含宿主程序集（ClassIsland.Core.dll 等），
+          与生产环境已验证可加载的插件目录结构一致。</p>
+      </div>
+
+      <div class="table-wrap">
+        <table class="spec-table">
+          <thead>
+            <tr><th>功能</th><th>实现路径</th><th>改动位置</th><th>影响自启</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="#duty">值日生提醒</a></td>
+              <td><span class="badge plugin">插件</span></td>
+              <td>D 盘 <code>Plugins\</code>（新增）</td>
+              <td class="ok">否</td>
+            </tr>
+            <tr>
+              <td><a href="#web">定时打开网页</a></td>
+              <td><span class="badge plugin">插件</span></td>
+              <td>D 盘 <code>Plugins\</code>（新增）</td>
+              <td class="ok">否</td>
+            </tr>
+            <tr>
+              <td><a href="#weather">天气提醒（6h→12h）</a></td>
+              <td><span class="badge script">脚本更新</span></td>
+              <td>D 盘主程序文件（原地覆盖）</td>
+              <td class="ok">否</td>
+            </tr>
+            <tr class="row-muted">
+              <td>点名语音优化</td>
+              <td><span class="badge dropped">已取消</span></td>
+              <td>—</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="path-cards">
+        <a class="path-card" href="#duty">
+          <span class="path-no">01</span>
+          <span class="path-ribbon plugin">插件</span>
+          <h3>值日生提醒</h3>
+          <p>上课前 / 自定义时间点提醒值日生，文案可自定义，内置预设模板。</p>
+        </a>
+        <a class="path-card" href="#web">
+          <span class="path-no">02</span>
+          <span class="path-ribbon plugin">插件</span>
+          <h3>定时打开网页</h3>
+          <p>语文课前 1 分钟与周日定时打开固定网页；课前 2 分钟弹独立确认对话框，可取消本次计划。</p>
+        </a>
+        <a class="path-card" href="#weather">
+          <span class="path-no">03</span>
+          <span class="path-ribbon script">脚本更新</span>
+          <h3>天气提醒</h3>
+          <p>逐小时预报 6h → 12h 两处硬编码修改，补丁脚本原地覆盖 D 盘文件。</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 01 DUTY ============ -->
+  <section id="duty" class="section alt">
+    <div class="wrap">
+      <h2 class="sec-title"><span class="sec-no">01</span>值日生提醒 <span class="badge plugin">插件</span></h2>
+      <p class="sec-lede">在每节上课前的时间点或自定义时间点，提醒值日生擦黑板 / 值日。
+        支持自定义提醒时间与提醒内容，并提供预设内容。</p>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h4>需求拆解</h4>
+          <ul class="check-list">
+            <li><b>提醒时间</b>：每节上课前 X 分钟（X 可配，默认 2 分钟）</li>
+            <li><b>自定义时间</b>：每日固定时刻 / 每周几固定时刻，可多条</li>
+            <li><b>提醒内容</b>：每条规则独立文案，支持通知显示 + 语音播报</li>
+            <li><b>预设内容</b>：内置模板「请值日生擦黑板」「请值日生整理讲台」「请值日生倒垃圾、关灯」一键套用</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h4>设计要点</h4>
+          <ul class="plain-list">
+            <li>工程骨架照抄 <code>ClassIsland.ExamplePlugin</code>：目标框架 <code>net6.0-windows7.0</code>，引用本仓库 <code>ClassIsland.PluginSdk</code>（<code>Private=false</code>），<code>CreateCipx=true</code> 构建即出包。</li>
+            <li>调度：注入 <code>ILessonsService</code>，定时器轮询「下节课开课时间 − X 分钟」，课表中途调整也能跟上；自定义时间用每日/每周定时器。</li>
+            <li>展示：调用 <code>INotificationHostService.ShowNotification</code>，语音走现有 <code>ISpeechService</code> 通道。</li>
+            <li>设置页：插件自带 SettingsPage，规则列表 + 预设模板下拉。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flow">
+        <span class="flow-step">构建产出 <code>DutyReminder.cipx</code></span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">软件内「从本地安装」</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">落盘 D 盘 <code>Plugins\</code></span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step">重启生效（配置存 D 盘 <code>Config\</code>）</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 02 WEB ============ -->
+  <section id="web" class="section">
+    <div class="wrap">
+      <h2 class="sec-title"><span class="sec-no">02</span>定时打开网页 <span class="badge plugin">插件</span></h2>
+      <p class="sec-lede">语文课前 1 分钟与周日自定义时间打开固定网页；<b>打开前 1 分钟（即课前 2 分钟）</b>
+        弹出<b>独立确认对话框</b>，点击「暂不打开」即可取消本次计划。</p>
+
+      <div class="timeline">
+        <div class="tl-item">
+          <span class="tl-dot"></span>
+          <b>课前 2 分钟（＝打开前 1 分钟）</b>
+          <p>弹出<b>独立确认对话框</b>：「即将打开 ××网页」，带 <kbd>暂不打开</kbd> / 关闭按钮，置于主窗口之上。</p>
+        </div>
+        <div class="tl-item">
+          <span class="tl-dot"></span>
+          <b>点击取消 / 关闭对话框</b>
+          <p>置位取消标志，本次计划作废，到点不再打开；对话框超时未操作则视为确认。</p>
+        </div>
+        <div class="tl-item">
+          <span class="tl-dot"></span>
+          <b>课前 1 分钟（打开动作时刻）</b>
+          <p>未取消则 <code>Process.Start(URL)</code>（ShellExecute，同内置「运行」行动的网页分支写法）。</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h4>规则类型</h4>
+          <ul class="check-list">
+            <li><b>类型 A · 语文课前</b>：科目名匹配「语文」，课前 X 分钟打开（默认 1）；提醒固定在打开前 1 分钟（默认课前 2 分钟）弹出，按课表自动跟随</li>
+            <li><b>类型 B · 每周日</b>：自定义时刻（可多条），不依赖课表</li>
+            <li>每条规则独立配置目标 URL，可启停</li>
+          </ul>
+          <p class="note">选型依据：现有自动化缺两块原语——触发器没有「课前提前量」，通知没有按钮交互，
+            因此纯配置拼不出「可取消」，必须由插件自调度。</p>
+        </div>
+        <div class="panel">
+          <h4>实现要点</h4>
+          <ul class="plain-list">
+            <li>调度：注入 <code>ILessonsService</code> 轮询判断「下节课科目 + 距开课倒计时」；周日规则用定时器。</li>
+            <li>弹窗：<b>独立确认对话框</b>——插件自建 WPF <code>Window</code>（Topmost、置于主窗口之上），确认通道不走通知系统。</li>
+            <li>打开：ShellExecute 方式打开 URL，兼容 Win7 默认浏览器。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="pending">
+        <h4>已确认（决策定稿）</h4>
+        <ol>
+          <li>「语文课前 1 分钟」指<b>打开动作</b>发生在课前 1 分钟；提醒则在<b>课前 2 分钟</b>（即打开前 1 分钟）弹出。</li>
+          <li>弹窗形态：<b>独立确认对话框</b>（插件自建 WPF Window），不使用通知横幅内嵌按钮。</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 WEATHER ============ -->
+  <section id="weather" class="section alt">
+    <div class="wrap">
+      <h2 class="sec-title"><span class="sec-no">03</span>天气提醒 <span class="badge script">脚本更新</span></h2>
+      <p class="sec-lede">自定义时间 / 课间的天气预报提醒用现有功能配置即可；
+        逐小时预报 6h → 12h 是主程序两处硬编码，用补丁脚本原地更新，不做完整重装。</p>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h4>① 自定义时间提醒 —— 纯配置，零代码</h4>
+          <ul class="plain-list">
+            <li>课表时间点挂行动「<b>显示天气提醒</b>」（<code>classisland.notification.weather</code>），到点即弹。</li>
+            <li>或用自动化：触发器「课间休息时 / cron 定时」+ 同一行动，任意课间、任意时刻可配。</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h4>② 6h → 12h —— 脚本更新的唯一改动点</h4>
+          <ul class="code-list">
+            <li><code>WeatherHourlyForecastNotificationProvider.xaml.cs:35</code><br><span class="dim">for (i = 0; i &lt; 6; i++) → &lt; 12</span></li>
+            <li><code>WeatherHourlyForecastNotificationProvider.xaml</code><br><span class="dim">手写 6 组时间/图标/温度 → 建议改为 ItemsControl 动态生成 12 组</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel wide">
+        <h4>补丁脚本更新流程（patch.ps1）</h4>
+        <div class="flow tall">
+          <span class="flow-step">前置验证：小米天气接口 <code>forecastHourly</code> ≥ 12 条</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step">改两处硬编码 → <code>dotnet publish</code> 同配置出包</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step">脚本：停 ClassIsland 进程 → 备份原文件</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step">D 盘<b>同路径、同文件名</b>原地覆盖 → 启动</span>
+        </div>
+        <p class="note">风险与对策：程序运行中文件被占用 → 脚本先停进程；还原系统 → 改动全在 D 盘，还原不回滚；
+          自启 → C 盘快照里的快捷方式指向 D 盘路径不变，无需任何操作。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DEPLOY ============ -->
+  <section id="deploy" class="section">
+    <div class="wrap">
+      <h2 class="sec-title"><span class="sec-no">04</span>部署与自启安全</h2>
+      <p class="sec-lede">三项改动全部落在 D 盘，或保持 D 盘路径原地覆盖；C 盘还原快照中的开机自启快捷方式始终有效。</p>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 680 260" role="img" aria-label="部署路径示意图" class="diagram">
+          <text x="40" y="34" class="d-title">更新为什么不会弄丢开机自启</text>
+
+          <!-- C盘 -->
+          <rect x="40" y="60" width="250" height="120" rx="8" fill="#FFFFFF" stroke="#D8D5CC" stroke-width="1"/>
+          <text x="60" y="88" class="d-head">C:\ 系统盘（开机还原）</text>
+          <rect x="60" y="104" width="210" height="30" rx="6" fill="#F1EFE8" stroke="#D8D5CC" stroke-width="0.5"/>
+          <text x="165" y="123" class="d-body" text-anchor="middle">Startup\ClassIsland.lnk</text>
+          <text x="165" y="158" class="d-dim" text-anchor="middle">已包含在还原快照内</text>
+
+          <!-- D盘 -->
+          <rect x="390" y="60" width="250" height="120" rx="8" fill="#FFFFFF" stroke="#D8D5CC" stroke-width="1"/>
+          <text x="410" y="88" class="d-head">D:\ ClassIsland 安装目录</text>
+          <rect x="410" y="104" width="210" height="30" rx="6" fill="#EAF0FF" stroke="#2B54D9" stroke-width="0.8"/>
+          <text x="515" y="123" class="d-body" text-anchor="middle">主程序 · Config · Plugins</text>
+          <text x="515" y="158" class="d-dim" text-anchor="middle">持久保存，还原不回滚</text>
+
+          <!-- 箭头 -->
+          <line x1="290" y1="119" x2="384" y2="119" stroke="#2B54D9" stroke-width="1.2" marker-end="url(#chev)"/>
+          <text x="337" y="108" class="d-arrow-label" text-anchor="middle">指向不变</text>
+
+          <!-- 底部注释条 -->
+          <rect x="40" y="204" width="600" height="36" rx="8" fill="#FFF7ED" stroke="#B45309" stroke-width="0.8"/>
+          <text x="340" y="227" class="d-note" text-anchor="middle">插件新增落 D 盘 Plugins · 脚本原地覆盖 D 盘同路径 → 还原后开机自启照常生效</text>
+
+          <defs>
+            <marker id="chev" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="none" stroke="#2B54D9" stroke-width="1.2"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="grid-3">
+        <div class="panel step">
+          <span class="step-no">1</span>
+          <h4>配置先行</h4>
+          <p>在软件内配好天气 ① 自定义时间提醒（零改动，随时可做）。</p>
+        </div>
+        <div class="panel step">
+          <span class="step-no">2</span>
+          <h4>安装两个插件</h4>
+          <p>值日生提醒、定时打开网页依次打包 <code>.cipx</code>，走「从本地安装」，重启生效。</p>
+        </div>
+        <div class="panel step">
+          <span class="step-no">3</span>
+          <h4>最后跑脚本</h4>
+          <p>天气 12h 补丁最后执行：<code>patch.ps1 -TargetDir "D:\ClassIsland"</code>（自动停程序 → 备份 → 原地覆盖 → 启动），新编译的 <code>ClassIsland.dll</code> 已放在 <code>update\</code>。</p>
+        </div>
+      </div>
+
+      <div class="dropped-box">
+        <h4>已取消：点名语音优化</h4>
+        <p>本轮不实施。原分析保留备查：裸人名直接送入对话式 TTS、缺少朗读指令是读法异常的根因；
+          若日后重启该项，按「MiMoTTS UserPrompt 指令 → IslandCaller 文本标记 → 注入 user 消息」三步走，均为插件层改动。</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>ClassIsland-net6 · 功能优化定稿方案 v1.0</span>
+    <span class="dim">插件 ×2 · 脚本更新 ×1 · 取消 ×1</span>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

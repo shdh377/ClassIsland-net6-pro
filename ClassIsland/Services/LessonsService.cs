@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -241,23 +242,13 @@ public class LessonsService : ObservableRecipient, ILessonsService
         RulesetService = rulesetService;
         IpcService = ipcService;
 
-        IpcService.IpcProvider.CreateIpcJoint<IPublicLessonsService>(this);
         RulesetService.RegisterRuleHandler("classisland.lessons.timeState", TimeStateHandler);
         RulesetService.RegisterRuleHandler("classisland.lessons.currentSubject", CurrentSubjectHandler);
         RulesetService.RegisterRuleHandler("classisland.lessons.nextSubject", NextSubjectHandler);
         RulesetService.RegisterRuleHandler("classisland.lessons.previousSubject", PreviousSubjectHandler);
         CurrentTimeStateChanged += (sender, args) => RulesetService.NotifyStatusChanged();
-        PropertyChanged += (sender, args) =>
-        {
-            if (args.PropertyName == nameof(CurrentSubject))
-            {
-                RulesetService.NotifyStatusChanged();
-            }
-            if (args.PropertyName == nameof(CurrentClassPlan))
-            {
-                CurrentClassPlan?.RefreshIsChangedClass();
-            }
-        };
+        PropertyChanged += OnPropertyChanged;
+        PropertyChanging += OnPropertyChanging;
 
 
         CurrentTimeStateChanged += async (_, _) =>
@@ -283,6 +274,43 @@ public class LessonsService : ObservableRecipient, ILessonsService
 
         ProcessLessons();  // 防止在课程服务初始化后因没有更新课表获取到错误的信息
         StartMainTimer();
+
+        // Joint 放在构造函数最后注册：若此前构造中途失败，不会残留 Joint 导致下一次构造报"重复公开"。
+        try
+        {
+            IpcService.IpcProvider.CreateIpcJoint<IPublicLessonsService>(this);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Logger.LogWarning(ex, "IPublicLessonsService 的 IPC Joint 已存在，跳过重复注册。");
+        }
+    }
+
+    private void OnPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(CurrentSubject))
+        {
+            RulesetService.NotifyStatusChanged();
+        }
+
+        if (args.PropertyName == nameof(CurrentClassPlan) && CurrentClassPlan != null)
+        {
+            CurrentClassPlan.ClassesChanged += CurrentClassPlanOnClassesChanged;
+            CurrentClassPlan.RefreshIsChangedClass();
+        }
+    }
+
+    private void OnPropertyChanging(object? sender, PropertyChangingEventArgs e)
+    {
+        if (e.PropertyName == nameof(CurrentClassPlan) && CurrentClassPlan != null)
+        {
+            CurrentClassPlan.ClassesChanged -= CurrentClassPlanOnClassesChanged;
+        }
+    }
+
+    private void CurrentClassPlanOnClassesChanged(object? sender, EventArgs e)
+    {
+        
     }
 
     private bool CurrentSubjectHandler(object? settings)
@@ -328,7 +356,7 @@ public class LessonsService : ObservableRecipient, ILessonsService
             return false;
         }
         var i0 = GetClassIndex(layout.Layouts.IndexOf(prevClassTimeItem));
-        if (CurrentClassPlan?.Classes.Count > i0 &&
+        if (i0 >= 0 && CurrentClassPlan?.Classes.Count > i0 &&
             Profile.Subjects.TryGetValue(CurrentClassPlan.Classes[i0].SubjectId, out var prevSubject))
         {
             return prevSubject == subject;
@@ -409,9 +437,10 @@ public class LessonsService : ObservableRecipient, ILessonsService
         CurrentClassPlan.TimeLayout.IsActivated = true;
 
         var now = ExactTimeService.GetCurrentLocalDateTime().TimeOfDay;
+        var validTimeLayoutItems = CurrentClassPlan.ValidTimeLayoutItems;
 
         // 获取当前时间点信息
-        currentTimeLayoutItem = layout.FirstOrDefault(i =>
+        currentTimeLayoutItem = validTimeLayoutItems.FirstOrDefault(i =>
             i.TimeType is 0 or 1 &&
             i.StartSecond.TimeOfDay <= now &&
             i.EndSecond.TimeOfDay >= now);
@@ -421,7 +450,7 @@ public class LessonsService : ObservableRecipient, ILessonsService
             if (currentTimeLayoutItem.TimeType == 0)
             {
                 var i0 = GetClassIndex((int)currentSelectedIndex);
-                if (CurrentClassPlan.Classes.Count > i0 &&
+                if (i0 >= 0 && CurrentClassPlan.Classes.Count > i0 &&
                     Profile.Subjects.TryGetValue(CurrentClassPlan.Classes[i0].SubjectId, out var subject))
                 {
                     currentSubject = subject;
@@ -438,17 +467,17 @@ public class LessonsService : ObservableRecipient, ILessonsService
         }
 
         // 获取下节时间点信息
-        nextClassTimeLayoutItem = layout.FirstOrDefault(i =>
+        nextClassTimeLayoutItem = validTimeLayoutItems.FirstOrDefault(i =>
             i.TimeType == 0 &&
             i.EndSecond.TimeOfDay >= now);
         if (nextClassTimeLayoutItem != null)
         {
             var i0 = GetClassIndex(layout.IndexOf(nextClassTimeLayoutItem));
-            if (CurrentClassPlan.Classes.Count > i0 &&
+            if (i0 >= 0 && CurrentClassPlan.Classes.Count > i0 &&
                 Profile.Subjects.TryGetValue(CurrentClassPlan.Classes[i0].SubjectId, out var subject))
                 nextClassSubject = subject;
         }
-        nextBreakingTimeLayoutItem = layout.FirstOrDefault(i =>
+        nextBreakingTimeLayoutItem = validTimeLayoutItems.FirstOrDefault(i =>
             i.TimeType == 1 &&
             i.EndSecond.TimeOfDay >= now);
 
@@ -508,6 +537,10 @@ public class LessonsService : ObservableRecipient, ILessonsService
 
     private int GetClassIndex(int index)
     {
+        if (index < 0 || index >= CurrentClassPlan?.TimeLayout.Layouts.Count )
+        {
+            return -1;
+        }
         var k = CurrentClassPlan?.TimeLayout.Layouts[index];
         var l = (from t in CurrentClassPlan?.TimeLayout.Layouts where t.TimeType == 0 select t).ToList();
         var i = l.IndexOf(k);

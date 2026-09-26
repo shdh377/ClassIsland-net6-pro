@@ -20,6 +20,22 @@
 		       Code="CISDK0001"
 		       Text="插件清单 manifest.yml 在生成目录中不存在"/>
 		
+		<!-- 宿主程序集由 ClassIsland 主程序提供，不打入插件包：
+		     若包内存在 ClassIsland.Core.dll 等副本，插件 AssemblyLoadContext 会加载到本地副本，
+		     导致 PluginBase / PluginEntrance 类型识别失败、插件无法加载。 -->
+		<ItemGroup>
+			<_HostAssemblyFile Include="$(OutputPath)ClassIsland.Core.dll"
+			                   Condition="Exists('$(OutputPath)ClassIsland.Core.dll')"/>
+			<_HostAssemblyFile Include="$(OutputPath)ClassIsland.Shared.dll"
+			                   Condition="Exists('$(OutputPath)ClassIsland.Shared.dll')"/>
+			<_HostAssemblyFile Include="$(OutputPath)ClassIsland.Shared.IPC.dll"
+			                   Condition="Exists('$(OutputPath)ClassIsland.Shared.IPC.dll')"/>
+		</ItemGroup>
+		<Message Text="从插件包中移除宿主程序集：@(_HostAssemblyFile->'%(Filename)%(Extension)', ', ')"
+		         Importance="high"
+		         Condition="'@(_HostAssemblyFile)' != ''"/>
+		<Delete Files="@(_HostAssemblyFile)"/>
+
 		<!-- Create CIPX -->
 		<RemoveDir Directories="$(CipxPackageOutputDirectory)"
 		           Condition="Exists($(CipxPackageOutputDirectory))"/>

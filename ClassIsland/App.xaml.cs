@@ -772,6 +772,10 @@ public partial class App : AppBase, IAppHost
         GetService<IWeatherService>();
         GetService<IExactTimeService>();
         _ = GetService<WallpaperPickingService>().GetWallpaperAsync();
+        // 在后台 StartAsync 之前先在主线程完成 ILessonsService 的首次解析：
+        // StartAsync 是丢弃任务且会并发解析服务，与下方 GetService<MainWindow>() 同时首次解析单例时，
+        // 并发缓存路径可能构造两个 LessonsService 实例，导致 IPC Joint 重复注册崩溃。
+        GetService<ILessonsService>();
         _ = IAppHost.Host.StartAsync();
         IAppHost.GetService<IPluginMarketService>().LoadPluginSource();
 

@@ -1,0 +1,9 @@
+id: WebOpener
+name: 定时打开网页
+description: 语文课前与每周固定时间自动打开固定网页，打开前 1 分钟弹出独立确认对话框，可取消本次打开计划。
+entranceAssembly: "WebOpener.dll"
+url: https://github.com/ClassIsland/ClassIsland
+author: ClassIsland-net6
+version: 1.0.0.0
+apiVersion: 1.4.0.0
+icon: icon.png

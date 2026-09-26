@@ -66,7 +66,7 @@ public class AfterSchoolNotificationProvider : INotificationProvider, IHostedSer
     {
         var settings = (IAfterSchoolNotificationProviderSettingsBase?)GetAttachedSettings() ?? Settings;
         var now = ExactTimeService.GetCurrentLocalDateTime().TimeOfDay;
-        var afterSchoolTime = LessonsService.CurrentClassPlan?.TimeLayout.Layouts.LastOrDefault(i => i.TimeType is 0 or 1)?.EndSecond.TimeOfDay;
+        var afterSchoolTime = LessonsService.CurrentClassPlan?.ValidTimeLayoutItems.LastOrDefault(i => i.TimeType is 0 or 1)?.EndSecond.TimeOfDay;
         if (!settings.IsEnabled ||
             (now - afterSchoolTime) > TimeSpan.FromSeconds(10))
             return;

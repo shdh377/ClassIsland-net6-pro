@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -119,6 +119,12 @@ public class WeatherNotificationProvider : INotificationProvider, IHostedService
             return;
         }
         ShowWeatherForecastCore();
+        // 时间点上打开了「在此处启用」（附加设置生效）时，三天气象板展示完后
+        // 接着展示逐小时预报板：两条同提供方按入队顺序串行显示（NotificationPriority 以 Index 破平）。
+        if (s is WeatherNotificationAttachedSettings)
+        {
+            ShowWeatherForecastHourlyCore();
+        }
     }
 
     private void ShowWeatherForecastCore()
