@@ -29,7 +29,6 @@ using ClassIsland.ViewModels.SettingsPages;
 using MaterialDesignThemes.Wpf;
 using MdXaml;
 using Sentry;
-using WebSocketSharp;
 using Path = System.IO.Path;
 
 namespace ClassIsland.Views.SettingPages;

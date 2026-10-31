@@ -401,6 +401,12 @@
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
                                         <Setter Property="Padding" Value="0 0" />
+                                        <Style.Triggers>
+                                            <!-- 【已禁用插件市场】隐藏「市场」分类入口，仅保留「已安装」 -->
+                                            <DataTrigger Binding="{Binding}" Value="市场">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </ListBox.ItemContainerStyle>
                                 <ListBox.ItemTemplate>
@@ -423,9 +429,11 @@
                                                      IsPopupOpen="{Binding ViewModel.IsPluginMarketOperationsPopupOpened, RelativeSource={RelativeSource FindAncestor, AncestorType=local:PluginsSettingsPage}, Mode=TwoWay}">
                                 <StackPanel ButtonBase.Click="ButtonBase2_OnClick">
                                     <MenuItem Icon="{materialDesign:PackIcon Reload}" Header="从缓存重载插件源" 
+                                              Visibility="Collapsed"
                                               Click="MenuItemReloadFromCache_OnClick"
                                               IsEnabled="{Binding PluginMarketService.IsLoadingPluginSource, Converter={StaticResource InvertBooleanConverter}}"/>
                                     <MenuItem Icon="{materialDesign:PackIcon SourceRepositoryMultiple}" Header="管理插件源…"
+                                              Visibility="Collapsed"
                                               Click="MenuItemManagePluginSources_OnClick"
                                               IsEnabled="{Binding PluginMarketService.IsLoadingPluginSource, Converter={StaticResource InvertBooleanConverter}}"/>
                                     <Separator/>
@@ -437,6 +445,7 @@
                                 </StackPanel>
                             </materialDesign:PopupBox>
                             <Button DockPanel.Dock="Right" 
+                                    Visibility="Collapsed"
                                     Style="{StaticResource MaterialDesignFlatButton}"
                                     Click="ButtonBaseRefreshPlugins_OnClick"
                                     IsEnabled="{Binding PluginMarketService.IsLoadingPluginSource, Converter={StaticResource InvertBooleanConverter}}">

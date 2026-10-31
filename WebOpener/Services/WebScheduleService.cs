@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using ClassIsland.Core.Abstractions.Services;
 using ClassIsland.WebOpener.Models;
 using ClassIsland.WebOpener.Views;
@@ -8,10 +9,11 @@ using System.Windows;
 namespace ClassIsland.WebOpener.Services;
 
 /// <summary>
-/// 定时打开网页调度器。
+/// 定时打开调度器。
 /// 每 2 秒轮询：课前规则按「科目匹配 + 距上课倒计时」判断，每周规则按本机时间判断。
 /// 打开前 1 分钟（提醒提前量 = 打开提前量 + 1 分钟）弹独立确认对话框；
 /// 槽位 key 防重 + 取消集合保证同一计划只处理一次，重启后同一天也不会重复打扰。
+/// 「课前打开」计划若命中全局静默时段，则跳过本次提醒与打开。
 /// </summary>
 public class WebScheduleService
 {
@@ -43,7 +45,7 @@ public class WebScheduleService
             return;
         }
         _timer = new System.Threading.Timer(Tick, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
-        _logger?.LogInformation("定时打开网页调度器已启动。");
+        _logger?.LogInformation("定时打开调度器已启动。");
     }
 
     private void Tick(object? state)
@@ -68,13 +70,19 @@ public class WebScheduleService
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "定时打开网页调度轮询失败。");
+            _logger?.LogError(ex, "定时打开调度轮询失败。");
         }
     }
 
     private void CheckClassRule(WebRule rule)
     {
         if (string.IsNullOrWhiteSpace(rule.SubjectFilter))
+        {
+            return;
+        }
+
+        // 全局静默时段：命中期间不提醒、不打开（仅对「课前打开」生效）。
+        if (_store.IsInSilenceWindow(DateTime.Now))
         {
             return;
         }
@@ -156,18 +164,18 @@ public class WebScheduleService
                 return;
             }
         }
-        OpenUrl(rule);
+        OpenTarget(rule);
     }
 
     private void ShowConfirmDialog(WebRule rule, string openKey)
     {
         // 先走 ClassIsland 通知系统弹横幅提醒，再弹独立确认对话框。
-        ShowBanner();
+        ShowBanner(rule.IsFile ? "1 分钟后将打开文件" : "1 分钟后将打开网页");
         Application.Current.Dispatcher.Invoke(() =>
         {
             try
             {
-                var dialog = new ConfirmDialog(rule.TriggerLabel, rule.Url);
+                var dialog = new ConfirmDialog(rule.TriggerLabel, rule.Target, rule.IsFile);
                 dialog.Closed += (_, _) =>
                 {
                     if (dialog.Cancelled)
@@ -176,7 +184,7 @@ public class WebScheduleService
                         {
                             _cancelledOpenKeys.Add(openKey);
                         }
-                        _logger?.LogDebug("用户取消了打开网页计划：{Url}", rule.Url);
+                        _logger?.LogDebug("用户取消了打开计划：{Target}", rule.Target);
                     }
                     else if (dialog.OpenNowRequested)
                     {
@@ -193,12 +201,12 @@ public class WebScheduleService
         });
     }
 
-    private void ShowBanner()
+    private void ShowBanner(string text)
     {
         try
         {
-            // 横幅不显示网址，仅提示即将打开。
-            _bannerProvider.ShowOpenWebReminder("1 分钟后将打开网页");
+            // 横幅不显示具体地址，仅提示即将打开。
+            _bannerProvider.ShowOpenWebReminder(text);
         }
         catch (Exception ex)
         {
@@ -207,19 +215,19 @@ public class WebScheduleService
     }
 
     /// <summary>设置页「测试触发」：与到点时一致的横幅 + 确认对话框，不写入计划。</summary>
-    public void TestReminder(string triggerLabel, string url)
+    public void TestReminder(WebRule rule)
     {
-        ShowBanner();
+        ShowBanner(rule.IsFile ? "1 分钟后将打开文件" : "1 分钟后将打开网页");
         Application.Current.Dispatcher.Invoke(() =>
         {
             try
             {
-                var dialog = new ConfirmDialog("测试 · " + triggerLabel, url);
+                var dialog = new ConfirmDialog("测试 · " + rule.TriggerLabel, rule.Target, rule.IsFile);
                 dialog.Closed += (_, _) =>
                 {
                     if (dialog.OpenNowRequested)
                     {
-                        OpenUrlDirect(url, "测试");
+                        OpenTarget(rule, "测试");
                     }
                 };
                 dialog.Show();
@@ -231,9 +239,16 @@ public class WebScheduleService
         });
     }
 
-    private void OpenUrl(WebRule rule)
+    private void OpenTarget(WebRule rule, string? ruleLabel = null)
     {
-        OpenUrlDirect(rule.Url, rule.TriggerLabel);
+        if (rule.IsFile)
+        {
+            OpenFileDirect(rule.FilePath, rule.IsFullscreenImage, rule.ImageDisplaySeconds, ruleLabel ?? rule.TriggerLabel);
+        }
+        else
+        {
+            OpenUrlDirect(rule.Url, ruleLabel ?? rule.TriggerLabel);
+        }
     }
 
     /// <summary>校验并打开网页（设置页「测试触发」与调度共用同一条打开链路）。</summary>
@@ -267,6 +282,55 @@ public class WebScheduleService
             {
                 _logger?.LogError(fallbackEx, "打开网页失败：{Url}", uri.AbsoluteUri);
             }
+        }
+    }
+
+    /// <summary>校验并打开本地文件；图片且开启全屏时走内置全屏窗口，失败时回退默认程序。</summary>
+    public void OpenFileDirect(string path, bool fullscreenImage, int displaySeconds, string? ruleLabel = null)
+    {
+        var trimmed = (path ?? "").Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            _logger?.LogWarning("文件路径为空，已跳过。");
+            return;
+        }
+
+        if (!File.Exists(trimmed))
+        {
+            _logger?.LogWarning("文件不存在，已跳过：{Path}", trimmed);
+            return;
+        }
+
+        if (fullscreenImage && WebFileHelper.IsImageFile(trimmed))
+        {
+            try
+            {
+                var shown = Application.Current.Dispatcher.Invoke(
+                    () => ImageFullscreenWindow.TryShow(trimmed, displaySeconds));
+                if (shown)
+                {
+                    _logger?.LogInformation("已全屏显示图片：{Path}（{Rule}）", trimmed, ruleLabel ?? "测试");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "全屏显示图片失败，改用默认程序打开：{Path}", trimmed);
+            }
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = trimmed,
+                UseShellExecute = true
+            });
+            _logger?.LogInformation("已打开文件：{Path}（{Rule}）", trimmed, ruleLabel ?? "测试");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "打开文件失败：{Path}", trimmed);
         }
     }
 

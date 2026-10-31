@@ -569,7 +569,8 @@ public partial class App : AppBase, IAppHost
                 services.AddSettingsPage<NotificationSettingsPage>();
                 services.AddSettingsPage<WindowSettingsPage>();
                 services.AddSettingsPage<WeatherSettingsPage>();
-                services.AddSettingsPage<UpdatesSettingsPage>();
+                // 【已禁用自动更新】更新设置页入口隐藏，功能代码保留以便恢复。
+                //services.AddSettingsPage<UpdatesSettingsPage>();
                 services.AddSettingsPage<AutomationSettingsPage>();
                 services.AddSettingsPage<StorageSettingsPage>();
                 services.AddSettingsPage<PrivacySettingsPage>();
@@ -753,18 +754,19 @@ public partial class App : AppBase, IAppHost
             spanCreateTaskbarIcon.Finish(ex);
         }
 
-        if (!ApplicationCommand.Quiet)  // 在静默启动时不进行更新相关操作
-        {
-            GetService<ISplashService>().SetDetailedStatus("正在进行更新服务启动操作");
-            var spanCheckUpdate = spanLaunching.StartChild("startup-process-update");
-            var r = await GetService<UpdateService>().AppStartup();
-            spanCheckUpdate.Finish();
-            if (r)
-            {
-                GetService<ISplashService>().EndSplash();
-                return;
-            }
-        }
+        // 【已禁用自动更新】启动时不再检查/下载更新，直接进入正常启动流程。
+        //if (!ApplicationCommand.Quiet)  // 在静默启动时不进行更新相关操作
+        //{
+        //    GetService<ISplashService>().SetDetailedStatus("正在进行更新服务启动操作");
+        //    var spanCheckUpdate = spanLaunching.StartChild("startup-process-update");
+        //    var r = await GetService<UpdateService>().AppStartup();
+        //    spanCheckUpdate.Finish();
+        //    if (r)
+        //    {
+        //        GetService<ISplashService>().EndSplash();
+        //        return;
+        //    }
+        //}
         GetService<ISplashService>().CurrentProgress = 45;
 
         GetService<ISplashService>().SetDetailedStatus("正在加载档案");
@@ -777,7 +779,8 @@ public partial class App : AppBase, IAppHost
         // 并发缓存路径可能构造两个 LessonsService 实例，导致 IPC Joint 重复注册崩溃。
         GetService<ILessonsService>();
         _ = IAppHost.Host.StartAsync();
-        IAppHost.GetService<IPluginMarketService>().LoadPluginSource();
+        // 【已禁用插件市场】启动时不再联网加载插件市场源（本地插件不受影响）。
+        //IAppHost.GetService<IPluginMarketService>().LoadPluginSource();
 
         var spanLoadMainWindow = spanLaunching.StartChild("span-loading-mainWindow");
         Logger.LogInformation("正在初始化MainWindow。");

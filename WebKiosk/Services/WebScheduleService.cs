@@ -1,0 +1,361 @@
+using System.Diagnostics;
+using System.IO;
+using ClassIsland.Core.Abstractions.Services;
+using ClassIsland.WebKiosk.Models;
+using ClassIsland.WebKiosk.Views;
+using Microsoft.Extensions.Logging;
+using System.Windows;
+
+namespace ClassIsland.WebKiosk.Services;
+
+/// <summary>
+/// 定时打开调度器。
+/// 每 2 秒轮询：课前规则按「科目匹配 + 距上课倒计时」判断，每周规则按本机时间判断。
+/// 打开前 1 分钟（提醒提前量 = 打开提前量 + 1 分钟）弹独立确认对话框；
+/// 槽位 key 防重 + 取消集合保证同一计划只处理一次，重启后同一天也不会重复打扰。
+/// 「课前打开」计划若命中全局静默时段，则跳过本次提醒与打开。
+/// </summary>
+public class WebScheduleService
+{
+    private const int RemindBeforeOpenMinutes = 1;
+
+    private readonly WebSettingsStore _store;
+    private readonly ILessonsService _lessons;
+    private readonly WebKioskNotificationProvider _bannerProvider;
+    private readonly KioskLauncher _kiosk;
+    private readonly ILogger<WebScheduleService>? _logger;
+
+    private System.Threading.Timer? _timer;
+    private readonly HashSet<string> _firedKeys = [];
+    private readonly HashSet<string> _cancelledOpenKeys = [];
+    private readonly object _sync = new();
+
+    public WebScheduleService(WebSettingsStore store, ILessonsService lessons,
+        WebKioskNotificationProvider bannerProvider, KioskLauncher kiosk,
+        ILogger<WebScheduleService>? logger = null)
+    {
+        _store = store;
+        _lessons = lessons;
+        _bannerProvider = bannerProvider;
+        _kiosk = kiosk;
+        _logger = logger;
+    }
+
+    public void Start()
+    {
+        if (_timer != null)
+        {
+            return;
+        }
+        _timer = new System.Threading.Timer(Tick, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+        _logger?.LogInformation("定时打开调度器已启动。");
+    }
+
+    private void Tick(object? state)
+    {
+        try
+        {
+            foreach (var rule in _store.Rules)
+            {
+                if (!rule.Enabled)
+                {
+                    continue;
+                }
+                if (rule.TriggerType == "class")
+                {
+                    CheckClassRule(rule);
+                }
+                else if (rule.TriggerType == "weekly")
+                {
+                    CheckWeeklyRule(rule);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "定时打开调度轮询失败。");
+        }
+    }
+
+    private void CheckClassRule(WebRule rule)
+    {
+        if (string.IsNullOrWhiteSpace(rule.SubjectFilter))
+        {
+            return;
+        }
+
+        // 全局静默时段：命中期间不提醒、不打开（仅对「课前打开」生效）。
+        if (_store.IsInSilenceWindow(DateTime.Now))
+        {
+            return;
+        }
+
+        var subjectName = _lessons.NextClassSubject?.Name ?? "";
+        if (!subjectName.Contains(rule.SubjectFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var left = _lessons.OnClassLeftTime;
+        if (left <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        var nextClass = _lessons.NextClassTimeLayoutItem;
+        var baseKey = $"c|{rule.Id}|{nextClass.StartSecond:yyyyMMddHHmmss}";
+
+        // 提醒：打开前 1 分钟（即课前 OpenLeadMinutes + 1 分钟）
+        var remindLead = rule.OpenLeadMinutes + RemindBeforeOpenMinutes;
+        if (left <= TimeSpan.FromMinutes(remindLead))
+        {
+            if (TryMark($"{baseKey}|remind"))
+            {
+                ShowConfirmDialog(rule, openKey: $"{baseKey}|open");
+            }
+        }
+
+        // 打开：课前 OpenLeadMinutes
+        if (left <= TimeSpan.FromMinutes(rule.OpenLeadMinutes))
+        {
+            RequestOpen(rule, $"{baseKey}|open");
+        }
+    }
+
+    private void CheckWeeklyRule(WebRule rule)
+    {
+        var now = DateTime.Now;
+        if (now.DayOfWeek != (DayOfWeek)rule.Weekday)
+        {
+            return;
+        }
+        if (!TimeSpan.TryParse(rule.Time, out var timeOfDay))
+        {
+            return;
+        }
+
+        var openAt = DateTime.Today + timeOfDay;
+        var remindAt = openAt - TimeSpan.FromMinutes(RemindBeforeOpenMinutes);
+        var dayKey = $"{DateTime.Now:yyyyMMdd}";
+
+        var remindDelta = (now - remindAt).TotalSeconds;
+        if (remindDelta >= 0 && remindDelta <= 60)
+        {
+            if (TryMark($"w|{rule.Id}|{dayKey}|remind"))
+            {
+                ShowConfirmDialog(rule, openKey: $"w|{rule.Id}|{dayKey}|open");
+            }
+        }
+
+        var openDelta = (now - openAt).TotalSeconds;
+        if (openDelta >= 0 && openDelta <= 60)
+        {
+            RequestOpen(rule, $"w|{rule.Id}|{dayKey}|open");
+        }
+    }
+
+    private void RequestOpen(WebRule rule, string openKey)
+    {
+        lock (_sync)
+        {
+            if (_cancelledOpenKeys.Contains(openKey))
+            {
+                return;
+            }
+            if (!_firedKeys.Add(openKey))
+            {
+                return;
+            }
+        }
+        OpenTarget(rule);
+    }
+
+    private void ShowConfirmDialog(WebRule rule, string openKey)
+    {
+        // 先走 ClassIsland 通知系统弹横幅提醒，再弹独立确认对话框。
+        ShowBanner(rule.IsFile ? "1 分钟后将打开文件" : "1 分钟后将打开网页");
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            try
+            {
+                var dialog = new ConfirmDialog(rule.TriggerLabel, rule.Target, rule.IsFile);
+                dialog.Closed += (_, _) =>
+                {
+                    if (dialog.Cancelled)
+                    {
+                        lock (_sync)
+                        {
+                            _cancelledOpenKeys.Add(openKey);
+                        }
+                        _logger?.LogDebug("用户取消了打开计划：{Target}", rule.Target);
+                    }
+                    else if (dialog.OpenNowRequested)
+                    {
+                        // 用户主动点「打开」：立即打开并占住槽位，到点不再重复打开。
+                        RequestOpen(rule, openKey);
+                    }
+                };
+                dialog.Show();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "弹出确认对话框失败，将按计划直接打开。");
+            }
+        });
+    }
+
+    private void ShowBanner(string text)
+    {
+        try
+        {
+            // 横幅不显示具体地址，仅提示即将打开。
+            _bannerProvider.ShowOpenWebReminder(text);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "横幅提醒弹出失败。");
+        }
+    }
+
+    /// <summary>设置页「测试触发」：与到点时一致的横幅 + 确认对话框，不写入计划。</summary>
+    public void TestReminder(WebRule rule)
+    {
+        ShowBanner(rule.IsFile ? "1 分钟后将打开文件" : "1 分钟后将打开网页");
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            try
+            {
+                var dialog = new ConfirmDialog("测试 · " + rule.TriggerLabel, rule.Target, rule.IsFile);
+                dialog.Closed += (_, _) =>
+                {
+                    if (dialog.OpenNowRequested)
+                    {
+                        OpenTarget(rule, "测试");
+                    }
+                };
+                dialog.Show();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "弹出测试对话框失败。");
+            }
+        });
+    }
+
+    private void OpenTarget(WebRule rule, string? ruleLabel = null)
+    {
+        if (rule.IsFile)
+        {
+            OpenFileDirect(rule.FilePath, rule.IsFullscreenImage, rule.ImageDisplaySeconds, ruleLabel ?? rule.TriggerLabel);
+            return;
+        }
+
+        // kiosk 全屏：失败（未装 Chrome/Edge 等）自动回退普通浏览器打开。
+        if (rule.KioskMode)
+        {
+            if (_kiosk.TryLaunchKiosk(rule.Url, out var browser))
+            {
+                _logger?.LogInformation("已按 kiosk 规则全屏打开：{Url}（{Browser}）（{Rule}）",
+                    rule.Url, browser, ruleLabel ?? rule.TriggerLabel);
+                return;
+            }
+            _logger?.LogWarning("kiosk 全屏不可用，回退普通打开：{Url}", rule.Url);
+        }
+
+        OpenUrlDirect(rule.Url, ruleLabel ?? rule.TriggerLabel);
+    }
+
+    /// <summary>关闭本插件打开的 kiosk 全屏窗口（设置页按钮调用）。</summary>
+    public bool CloseKiosk() => _kiosk.Close();
+
+    /// <summary>校验并打开网页（设置页「测试触发」与调度共用同一条打开链路）。</summary>
+    public void OpenUrlDirect(string url, string? ruleLabel = null)
+    {
+        var trimmed = url.Trim();
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            _logger?.LogWarning("网址无效，已跳过：{Url}", trimmed);
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = uri.AbsoluteUri,
+                UseShellExecute = true
+            });
+            _logger?.LogInformation("已打开网页：{Url}（{Rule}）", uri.AbsoluteUri, ruleLabel ?? "测试");
+        }
+        catch (Exception ex)
+        {
+            // 与宿主「运行」行动一致的兜底方式
+            try
+            {
+                Process.Start("explorer.exe", uri.AbsoluteUri);
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger?.LogError(fallbackEx, "打开网页失败：{Url}", uri.AbsoluteUri);
+            }
+        }
+    }
+
+    /// <summary>校验并打开本地文件；图片且开启全屏时走内置全屏窗口，失败时回退默认程序。</summary>
+    public void OpenFileDirect(string path, bool fullscreenImage, int displaySeconds, string? ruleLabel = null)
+    {
+        var trimmed = (path ?? "").Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            _logger?.LogWarning("文件路径为空，已跳过。");
+            return;
+        }
+
+        if (!File.Exists(trimmed))
+        {
+            _logger?.LogWarning("文件不存在，已跳过：{Path}", trimmed);
+            return;
+        }
+
+        if (fullscreenImage && WebFileHelper.IsImageFile(trimmed))
+        {
+            try
+            {
+                var shown = Application.Current.Dispatcher.Invoke(
+                    () => ImageFullscreenWindow.TryShow(trimmed, displaySeconds));
+                if (shown)
+                {
+                    _logger?.LogInformation("已全屏显示图片：{Path}（{Rule}）", trimmed, ruleLabel ?? "测试");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "全屏显示图片失败，改用默认程序打开：{Path}", trimmed);
+            }
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = trimmed,
+                UseShellExecute = true
+            });
+            _logger?.LogInformation("已打开文件：{Path}（{Rule}）", trimmed, ruleLabel ?? "测试");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "打开文件失败：{Path}", trimmed);
+        }
+    }
+
+    private bool TryMark(string key)
+    {
+        lock (_sync)
+        {
+            return _firedKeys.Add(key);
+        }
+    }
+}

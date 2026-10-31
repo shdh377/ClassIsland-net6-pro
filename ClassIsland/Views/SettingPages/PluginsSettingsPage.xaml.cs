@@ -31,7 +31,6 @@ using CommunityToolkit.Mvvm.Input;
 using MaterialDesignThemes.Wpf;
 using Microsoft.Win32;
 using Sentry;
-using WebSocketSharp;
 using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;

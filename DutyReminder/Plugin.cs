@@ -23,6 +23,7 @@ public class Plugin : PluginBase
         services.AddNotificationProvider<DutyNotificationProvider>();
         services.AddSingleton<DutyScheduler>();
         services.AddSettingsPage<DutySettingsPage>();
+        services.AddSettingsPage<DutyRotationSettingsPage>();
 
         AppBase.Current.AppStarted += (_, _) =>
         {

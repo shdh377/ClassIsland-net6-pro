@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Threading;
+using ClassIsland.WebOpener.Models;
 
 namespace ClassIsland.WebOpener.Views;
 
@@ -17,12 +18,17 @@ public partial class ConfirmDialog : Window
 
     private readonly DispatcherTimer _timeoutTimer;
 
-    public ConfirmDialog(string triggerLabel, string url)
+    public ConfirmDialog(string triggerLabel, string target, bool isFile = false)
     {
         InitializeComponent();
-        TitleText.Text = $"即将打开网页（{triggerLabel}）";
-        MessageText.Text = "1 分钟后将按计划打开以下网页。如需取消本次打开计划，请点击「暂不打开」。";
-        UrlText.Text = url;
+        var kind = isFile ? "文件" : "网页";
+        TitleText.Text = $"即将打开{kind}（{triggerLabel}）";
+        MessageText.Text = $"1 分钟后将按计划打开以下{kind}。如需取消本次打开计划，请点击「暂不打开」。";
+        UrlText.Text = target;
+        if (isFile && WebFileHelper.IsImageFile(target))
+        {
+            MessageText.Text = "1 分钟后将按计划全屏显示以下图片。如需取消本次计划，请点击「暂不打开」。";
+        }
 
         _timeoutTimer = new DispatcherTimer
         {

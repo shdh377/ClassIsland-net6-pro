@@ -1,0 +1,104 @@
+<ci:SettingsPageBase x:Class="ClassIsland.DutyReminder.Views.SettingsPages.DutyRotationSettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:local="clr-namespace:ClassIsland.DutyReminder.Views.SettingsPages"
+      xmlns:ci="http://classisland.tech/schemas/xaml/core"
+      mc:Ignorable="d"
+      Title="值日小组轮换"
+      TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+      Background="{DynamicResource MaterialDesignPaper}"
+      FontFamily="{StaticResource HarmonyOsSans}"
+      TextElement.FontWeight="Regular"
+      TextElement.FontSize="14"
+      TextOptions.TextFormattingMode="Ideal"
+      TextOptions.TextRenderingMode="Auto">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧：值日生表 + 轮换记录 -->
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="值日生表（每组一行）" FontSize="18" FontWeight="Bold" Margin="0 0 0 6"/>
+                <TextBlock FontSize="12" Foreground="#888888" Margin="0 0 0 8" TextWrapping="Wrap"
+                           Text="每行一组，可写成「第一组：张三、李四、王五」；不写组名时自动命名为「第 N 组」。组员之间用逗号、顿号、分号或空格分隔。也可直接从文件导入（.txt / .csv）。"/>
+                <StackPanel Orientation="Horizontal" Margin="0 0 0 8">
+                    <Button Content="从文件导入…" Padding="14 6" Margin="0 0 8 0" Click="ButtonImport_OnClick"/>
+                    <Button Content="解析文本" Padding="14 6" Click="ButtonParse_OnClick"/>
+                </StackPanel>
+                <TextBox x:Name="RosterTextBox" Height="130" AcceptsReturn="True" TextWrapping="NoWrap"
+                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                         FontFamily="Consolas"/>
+
+                <TextBlock Text="解析结果" FontSize="16" FontWeight="Bold" Margin="0 14 0 6"/>
+                <ListBox x:Name="GroupsList" Height="130"/>
+
+                <Separator Margin="0 16 0 12"/>
+
+                <TextBlock Text="轮换记录" FontSize="16" FontWeight="Bold" Margin="0 0 0 6"/>
+                <ListBox x:Name="RecordsList" Height="130"/>
+                <StackPanel Orientation="Horizontal" Margin="0 10 0 0">
+                    <Button Content="清空记录" Padding="14 6" Margin="0 0 8 0" Click="ButtonClearRecords_OnClick"/>
+                    <Button Content="保存全部" Padding="14 6" Click="ButtonSave_OnClick"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- 右侧：轮换设置 -->
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="轮换设置" FontSize="18" FontWeight="Bold" Margin="0 0 0 10"/>
+
+                <CheckBox x:Name="RotationEnabledCheck" Content="启用值日小组自动轮换提醒" IsChecked="False" Margin="0 0 0 6"/>
+
+                <TextBlock Text="轮换周期" Margin="0 8 0 2"/>
+                <ComboBox x:Name="IntervalCombo" SelectedIndex="0" SelectionChanged="IntervalCombo_OnSelectionChanged">
+                    <ComboBoxItem Content="每周轮换一组"/>
+                    <ComboBoxItem Content="每天轮换一组"/>
+                </ComboBox>
+
+                <StackPanel x:Name="WeekdayPanel">
+                    <TextBlock Text="提醒星期" Margin="0 10 0 2"/>
+                    <ComboBox x:Name="WeekdayCombo" SelectedIndex="1">
+                        <ComboBoxItem Content="周日"/>
+                        <ComboBoxItem Content="周一"/>
+                        <ComboBoxItem Content="周二"/>
+                        <ComboBoxItem Content="周三"/>
+                        <ComboBoxItem Content="周四"/>
+                        <ComboBoxItem Content="周五"/>
+                        <ComboBoxItem Content="周六"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <TextBlock Text="提醒时间 HH:mm" Margin="0 10 0 2"/>
+                <TextBox x:Name="RotTimeBox" Text="07:40"/>
+
+                <TextBlock Text="轮换基准日期（该日期所在的周期视为基准组，yyyy-MM-dd）" Margin="0 10 0 2"/>
+                <TextBox x:Name="AnchorDateBox"/>
+
+                <TextBlock Text="基准组序号（从 1 开始）" Margin="0 10 0 2"/>
+                <TextBox x:Name="AnchorIndexBox" Text="1"/>
+
+                <TextBlock Text="提醒文案模板" Margin="0 10 0 2"/>
+                <TextBox x:Name="TemplateBox" Text="本周值日小组：{group}（{members}）"/>
+                <TextBlock FontSize="12" Foreground="#888888" Margin="0 4 0 0" TextWrapping="Wrap"
+                           Text="可用占位符：{group} 组名、{members} 组员名单、{index} 组序号。"/>
+
+                <CheckBox x:Name="RotSpeechCheck" Content="语音播报" IsChecked="True" Margin="0 10 0 0"/>
+
+                <TextBlock x:Name="CurrentGroupText" Margin="0 14 0 0" TextWrapping="Wrap" FontWeight="Bold"
+                           Text="当前应值小组：—"/>
+
+                <StackPanel Orientation="Horizontal" Margin="0 14 0 0">
+                    <Button Content="保存设置" Padding="14 6" Margin="0 0 8 0" Click="ButtonSaveRotation_OnClick"/>
+                    <Button Content="测试提醒" Padding="14 6" Click="ButtonTestRotation_OnClick"/>
+                </StackPanel>
+                <TextBlock FontSize="12" Foreground="#888888" Margin="0 10 0 0" TextWrapping="Wrap"
+                           Text="到提醒时刻后会按模板弹出提醒并列出新一组组员名单，同时写入轮换记录。「测试提醒」按当前设置立即提醒一次（使用以上解析出的名单），不写入记录。"/>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</ci:SettingsPageBase>

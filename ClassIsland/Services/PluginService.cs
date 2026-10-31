@@ -63,6 +63,9 @@ public class PluginService : IPluginService
                 }
                 Directory.CreateDirectory(targetPath);
                 ZipFile.ExtractToDirectory(pkgPath, targetPath);
+                // 【插件默认禁用】新安装的插件默认不启用，需在「插件」设置页手动打开。
+                // 仅在安装/覆盖时写入；已存在的插件目录不受影响。
+                File.WriteAllText(Path.Combine(targetPath, ".disabled"), "");
             }
             catch (Exception e)
             {

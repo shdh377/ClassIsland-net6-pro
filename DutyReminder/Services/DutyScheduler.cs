@@ -7,6 +7,7 @@ namespace ClassIsland.DutyReminder.Services;
 /// <summary>
 /// 值日提醒调度器：每 2 秒轮询课表与自定义时间点，命中且未触发过的规则投递给通知提供方。
 /// 同一规则同一天同一时间点只触发一次（key 防重），应用重启后同一天也不会重复打扰。
+/// 另外按配置的周期处理「值日小组自动轮换」：到点列出新一组组员名单并记入轮换记录。
 /// </summary>
 public class DutyScheduler
 {
@@ -57,6 +58,8 @@ public class DutyScheduler
                     CheckTimedRule(rule);
                 }
             }
+
+            CheckRotation();
         }
         catch (Exception ex)
         {
@@ -107,6 +110,60 @@ public class DutyScheduler
             _logger?.LogDebug("触发定时提醒：{Text}（{Time}）", rule.Text, rule.Time);
             _provider.ShowDutyReminder(rule.Text, rule.Speech);
         }
+    }
+
+    /// <summary>值日小组自动轮换：到约定的时刻列出新一组组员名单并记入轮换记录。</summary>
+    private void CheckRotation()
+    {
+        var settings = _store.Rotation;
+        if (!settings.Enabled || _store.Groups.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTime.Now;
+        if (!settings.IsDaily && now.DayOfWeek != (DayOfWeek)settings.Weekday)
+        {
+            return;
+        }
+        if (!TimeSpan.TryParse(settings.Time, out var timeOfDay))
+        {
+            return;
+        }
+
+        var scheduled = DateTime.Today + timeOfDay;
+        var deltaSeconds = (now - scheduled).TotalSeconds;
+        if (deltaSeconds < 0 || deltaSeconds > 60)
+        {
+            return;
+        }
+
+        // 同一轮换周期（每周 / 每日）只提醒一次。
+        var index = DutyRotationCalculator.GetGroupIndex(settings, _store.Groups.Count, now);
+        if (index < 1 || index > _store.Groups.Count)
+        {
+            return;
+        }
+        if (!TryFire(DutyRotationCalculator.GetCycleKey(settings, now)))
+        {
+            return;
+        }
+
+        var group = _store.Groups[index - 1];
+        var text = DutyRotationCalculator.BuildText(settings, group, index);
+        _logger?.LogInformation("触发值日小组轮换提醒：第 {Index} 组 {Name}（{Members}）", index, group.Name, group.MembersText);
+
+        _store.AddRecord(new DutyRotationRecord
+        {
+            Time = now,
+            GroupIndex = index,
+            GroupName = DutyRotationCalculator.GroupName(group, index),
+            Members = group.MembersText,
+            Text = text
+        });
+        _store.Save();
+
+        _provider.ShowDutyReminder(text, settings.Speech);
     }
 
     private bool TryFire(string key)
